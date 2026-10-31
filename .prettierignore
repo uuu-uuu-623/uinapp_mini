@@ -5,3 +5,6 @@ pnpm-lock.yaml
 auto-imports.d.ts
 src/components.d.ts
 *.md
+
+# 第三方组件（含 uni-app 条件编译，标准 prettier 解析器无法处理）
+src/components/vk-data-goods-sku-popup/

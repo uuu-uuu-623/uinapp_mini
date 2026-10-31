@@ -169,8 +169,8 @@
             />
             <text
               :style="{
-                fontSize: '10px',
-                marginTop: '2px',
+                fontSize: '20rpx',
+                lineHeight: '16px',
                 color: isCollected ? '#ee0a24' : '#000',
               }"
             >
@@ -262,6 +262,8 @@
   import { ref, computed } from 'vue'
   import type { GoodsAttrList, goodsInfo, similarProductsList } from '@/api/goods/goodsDetails/type'
   import type { SkuPopupLocaldata } from '@/components/vk-data-goods-sku-popup/type.ts'
+  // 显式引入，确保小程序端被注册进 usingComponents（否则页面引用了未注册组件会白屏）
+  import VkDataGoodsSkuPopup from '@/components/vk-data-goods-sku-popup/vk-data-goods-sku-popup.vue'
 
   // 引入wot-ui的图片预览 组合式函数
   import { useImagePreview } from '@wot-ui/ui'
@@ -358,7 +360,12 @@
         _id: res.id,
         name: res.name,
         goods_thumb: res.mainPictures[0] as string,
-        spec_list: res.specs.map((item) => ({ name: item.name, list: item.value })),
+        spec_list: (res.specs || []).map((item) => ({
+          name: item.name,
+          // 兼容接口返回的 value 可能是 字符串数组 或 {name} 对象数组，并兜底空数组
+          // 否则 spec_list[0].list 为 undefined，插件组件 isManyCom 会崩溃
+          list: (item.value || []).map((v) => (typeof v === 'string' ? { name: v } : v)),
+        })),
         sku_list: res.skus.map((item) => {
           return {
             _id: item.id,
@@ -660,7 +667,7 @@
       color: #333;
       font-size: 28rpx;
       flex: 1; // ✅ 占据剩余空间，避免右侧空白过大
-      word-break: break-word;
+      overflow-wrap: break-word;
       line-height: 1.5;
       text-align: left; // ✅ 改为左对齐，配合 min-width 实现整齐排列
     }

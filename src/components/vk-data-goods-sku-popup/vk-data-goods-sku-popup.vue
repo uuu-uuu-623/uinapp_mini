@@ -169,8 +169,12 @@
   /* eslint-disable */
   var vk // vk依赖
   var goodsCache = {} // 本地商品缓存
+  import VkDataInputNumberBox from '../vk-data-input-number-box/vk-data-input-number-box.vue'
   export default {
     name: 'vk-data-goods-sku-popup',
+    components: {
+      VkDataInputNumberBox,
+    },
     emits: [
       'update:modelValue',
       'input',
@@ -1078,11 +1082,14 @@
         let that = this
         let { goodsInfo, defaultSingleSkuName, specListName } = that
         let isMany = true
+        let specList = goodsInfo[specListName]
         if (
-          goodsInfo[specListName] &&
-          goodsInfo[specListName].length === 1 &&
-          goodsInfo[specListName][0].list.length === 1 &&
-          goodsInfo[specListName][0].name === defaultSingleSkuName
+          specList &&
+          specList.length === 1 &&
+          specList[0] &&
+          specList[0].list &&
+          specList[0].list.length === 1 &&
+          specList[0].name === defaultSingleSkuName
         ) {
           isMany = false
         }

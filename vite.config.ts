@@ -28,6 +28,8 @@ export default defineConfig({
     Components({
       dirs: ['src/components'],
       dts: 'src/components.d.ts',
+      // vk 系列 SKU 组件已改为显式 import 引入，排除插件扫描避免其把 .js 打成散块导致小程序 require 不到
+      exclude: [/vk-data-/],
     }),
 
     // SVG 图标插件
