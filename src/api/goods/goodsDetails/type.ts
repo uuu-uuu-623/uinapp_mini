@@ -58,7 +58,7 @@ export interface brandInfo {
 export interface specsInfo {
   id: string //某可选规格id
   name: string //某可选规格名字
-  value: specsValueList[]
+  values: specsValueList[]
 }
 
 // 可选规格 - 可选值集合

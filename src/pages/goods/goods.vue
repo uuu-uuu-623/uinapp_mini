@@ -4,6 +4,7 @@
     <!-- 骨架屏 -->
     <!-- 轮播图区块 -->
     <wd-skeleton
+      animation="gradient"
       :loading="isSkeLoading"
       :rows="1"
       :row-col="[{ height: '700rpx' }]"
@@ -29,7 +30,12 @@
 
     <!-- 骨架屏 -->
     <!-- 商品信息卡片区块 -->
-    <wd-skeleton :loading="isSkeLoading" :row-col="[{ height: '300rpx' }]" theme="paragraph">
+    <wd-skeleton
+      animation="gradient"
+      :loading="isSkeLoading"
+      :row-col="[{ height: '300rpx' }]"
+      theme="paragraph"
+    >
       <!-- 商品信息卡片 -价格、描述、品牌信息等 -->
       <wd-card>
         <template #title>
@@ -50,8 +56,12 @@
           <view class="infoDesc">
             <view class="infoName">{{ goodsInfoData?.name }}</view>
             <view class="infoBrand">
-              <wd-tag variant="light" type="warning">{{ goodsInfoData?.brand.name }}</wd-tag>
-              <wd-tag variant="light" v-for="item in goodsInfoData?.categories" :key="item.id">
+              <wd-tag variant="light" type="warning">{{ goodsInfoData?.brand?.name }}</wd-tag>
+              <wd-tag
+                variant="light"
+                v-for="item in goodsInfoData?.categories || []"
+                :key="item.id"
+              >
                 {{ item.name }}
               </wd-tag>
             </view>
@@ -77,6 +87,7 @@
     <!-- 骨架屏 -->
     <!-- 商品详情卡片区块 -->
     <wd-skeleton
+      animation="gradient"
       :loading="isSkeLoading"
       :rows="2"
       :row-col="[{ height: '400rpx' }]"
@@ -192,7 +203,13 @@
         </wd-button>
       </wd-tabbar-item>
       <wd-tabbar-item name="buy">
-        <wd-button round custom-style="margin:0 20rpx;font-size:28rpx">立即购买</wd-button>
+        <wd-button
+          round
+          custom-style="margin:0 20rpx;font-size:28rpx"
+          @click.stop="openSkuPopup_buy"
+        >
+          立即购买
+        </wd-button>
       </wd-tabbar-item>
     </wd-tabbar>
   </view>
@@ -251,8 +268,16 @@
   <VkDataGoodsSkuPopup
     v-model="isShowSkuPopup"
     :localdata="localdata"
-    theme="black-white"
+    :mode="mode"
+    theme="default"
     safe-area-inset-bottom
+    :actived-style="{
+      color: mode === 2 ? '#ff9402' : '#1c64fd',
+      borderColor: mode === 2 ? '#ff9402' : '#1c64fd',
+    }"
+    buy-now-background-color="#1c64fd"
+    @cart="AddCart"
+    @buy="BuyNow"
   ></VkDataGoodsSkuPopup>
 </template>
 
@@ -261,15 +286,24 @@
   import { onLoad, onPageScroll } from '@dcloudio/uni-app'
   import { ref, computed } from 'vue'
   import type { GoodsAttrList, goodsInfo, similarProductsList } from '@/api/goods/goodsDetails/type'
-  import type { SkuPopupLocaldata } from '@/components/vk-data-goods-sku-popup/type.ts'
+  import type {
+    SkuPopupLocaldata,
+    SkuPopupEvent,
+  } from '@/components/vk-data-goods-sku-popup/type.ts'
   // 显式引入，确保小程序端被注册进 usingComponents（否则页面引用了未注册组件会白屏）
   import VkDataGoodsSkuPopup from '@/components/vk-data-goods-sku-popup/vk-data-goods-sku-popup.vue'
+  import { reqAddCart } from '@/api/cart'
+  import type { addCartParams } from '@/api/cart/type.ts'
+  import { useUserStore } from '@/stores/modules/user'
 
   // 引入wot-ui的图片预览 组合式函数
   import { useImagePreview } from '@wot-ui/ui'
   import GoodsDetailPopup from './components/GoodsDetailPopup.vue'
+
   // 向previewImage 传入图片数组即可
   const { previewImage } = useImagePreview()
+
+  const useStore = useUserStore()
 
   // 页面的安全区域
   const safeArea = ref<{
@@ -334,6 +368,15 @@
   // sku数据源
   const localdata = ref<SkuPopupLocaldata>({} as SkuPopupLocaldata)
 
+  // 按钮类型
+  enum btnMode {
+    Both = 1,
+    Cart = 2,
+    Buy = 3,
+  }
+  // 记录按钮的类型 默认是1
+  const mode = ref<number>(1)
+
   // 请求得到商品详情数据
   const getGoodsDetail = async () => {
     if (loading.value) return
@@ -345,7 +388,7 @@
       // 获取 轮播图图片数据
       swiperList.value = res.mainPictures || []
       // 如果有视频 就推进去swiperList
-      if (res.mainVideos) {
+      if (res.mainVideos && res.mainVideos.length > 0) {
         swiperVideoList.value = res.mainVideos
         swiperList.value.unshift(...swiperVideoList.value)
       }
@@ -364,7 +407,11 @@
           name: item.name,
           // 兼容接口返回的 value 可能是 字符串数组 或 {name} 对象数组，并兜底空数组
           // 否则 spec_list[0].list 为 undefined，插件组件 isManyCom 会崩溃
-          list: (item.value || []).map((v) => (typeof v === 'string' ? { name: v } : v)),
+          list: (item.values || []).map((i) => {
+            return {
+              name: i.name,
+            }
+          }),
         })),
         sku_list: res.skus.map((item) => {
           return {
@@ -428,15 +475,42 @@
   // 未来点击加入购物车按钮的回调
   // 展示sku 选择规格 数量加减 确认按钮 请求加入购物车 成功加入购物车
   const openSkuPopup_cart = () => {
-    console.log('加入购物车222')
-    console.log(localdata.value)
-    console.log(isShowSkuPopup.value)
-
     isShowSkuPopup.value = true
-    console.log(isShowSkuPopup.value)
-
-    console.log('加入购物车')
+    mode.value = btnMode.Cart
   }
+
+  const openSkuPopup_buy = () => {
+    isShowSkuPopup.value = true
+    mode.value = btnMode.Buy
+  }
+
+  // 点击添加到购物车按钮发请求
+  const AddCart = async (selectShop: SkuPopupEvent) => {
+    if (!selectShop.sku_name_arr.length) return
+    const isLogin = useStore.token ? true : false
+    if (!isLogin) {
+      uni.navigateTo({
+        url: `/pages/login/login?fromUrl=goods&goodId=${goodsInfoData.value?.id}`,
+      })
+      return
+    }
+
+    let select: addCartParams = {
+      skuId: selectShop._id,
+      count: selectShop.buy_num,
+    }
+
+    try {
+      await reqAddCart(select)
+      uni.showToast({ icon: 'success', title: '添加成功' })
+      isShowSkuPopup.value = false
+    } catch {
+      uni.showToast({ icon: 'fail', title: '添加失败' })
+    }
+  }
+
+  // 点击立即购买按钮 发请求
+  const BuyNow = async () => {}
 </script>
 
 <style scoped lang="scss">
@@ -597,6 +671,7 @@
 
     // 图片容器：抵消 wd-card 内部 padding 的影响，确保图片撑满
     .detail-imgs-wrapper {
+      overflow-x: hidden;
       margin: 20rpx -32rpx 0; // ⚠️ 负margin值需根据你实际 wd-card 的padding调整
     }
 

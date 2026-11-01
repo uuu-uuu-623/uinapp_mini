@@ -70,7 +70,7 @@
       text: '收货地址',
       url: userStore.isLogin ? '/pages_member/address/address' : '/pages/login/login',
     },
-    { icon: 'message', text: '订阅消息', url: userStore.isLogin ? '' : '/pages/login/login' },
+    { icon: 'common', text: '我的收藏', url: userStore.isLogin ? '' : '/pages/login/login' },
     { icon: 'mic', text: '客服', url: userStore.isLogin ? '' : '/pages/login/login' },
   ]
 </script>

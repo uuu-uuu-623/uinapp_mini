@@ -51,11 +51,7 @@
 
     <!-- 协议与勾选区域 -->
     <view class="agreement-section">
-      <wd-checkbox
-        v-model="agreementChecked"
-        :style="{ transform: 'scale(0.9)' }"
-        @change="({ value }: { value: boolean }) => (agreementChecked = value)"
-      >
+      <wd-checkbox v-model="agreementChecked" :style="{ transform: 'scale(0.9)' }">
         <view class="agreement-text">
           <text>若您手机号未注册，登录时将自动注册，且代表您同意</text>
           <text class="link">《小兔鲜生会员服务协议》</text>
@@ -89,11 +85,18 @@
   // 一键登录按钮的加载状态
   const loginLoading = ref(false)
 
+  const fromUrl = ref('')
+  const goodId = ref('')
+
   // 获取code登陆凭证
   let code: string = ''
-  onLoad(async () => {
+  onLoad(async (options) => {
     const res = await uni.login()
     code = res.code
+    if (options?.fromUrl && options?.goodId) {
+      fromUrl.value = options?.fromUrl
+      goodId.value = options?.goodId
+    }
   })
 
   const userStore = useUserStore()
@@ -104,17 +107,41 @@
 
   // 登陆成功后 的处理函数
   const successLogin = () => {
-    uni.showToast({ icon: 'success', title: '登陆成功' })
     if (timer !== null) {
       clearTimeout(timer)
     }
-    timer = setTimeout(() => {
-      // 登陆成功之后 返回用户信息页
-      uni.reLaunch({
-        url: '/pages/my/my',
-      })
-      timer = null // ✅ 执行完毕后置空
-    }, 1500)
+    uni.showToast({ icon: 'success', title: '登陆成功' })
+
+    let toUrl = ''
+    if (fromUrl.value) {
+      toUrl = goodId.value
+        ? `/pages/${fromUrl.value}/${fromUrl.value}?id=${goodId.value}`
+        : `/pages/${fromUrl.value}/${fromUrl.value}`
+
+      timer = setTimeout(() => {
+        // 登陆成功之后
+        // 如果是从商品详情页或者是别的页面跳转过来的 则回到对应页面
+        // 否则 回去首页
+        uni.navigateBack({
+          delta: 1,
+          fail: () => {
+            // 兜底：仅当页面栈中无上一页时触发（如直接扫码进入登录页）
+            const tabBarPages = ['pages/index/index', 'pages/cart/cart', 'pages/my/my']
+            const isTabBar = tabBarPages.some((p) => toUrl.includes(p))
+
+            if (isTabBar) {
+              uni.switchTab({ url: toUrl })
+            } else {
+              uni.redirectTo({ url: toUrl })
+            }
+          },
+        })
+
+        timer = null // ✅ 执行完毕后置空
+      }, 900)
+    } else {
+      uni.switchTab({ url: '/pages/my/my' })
+    }
   }
 
   // 企业版 获取用户手机号码 一键登录
