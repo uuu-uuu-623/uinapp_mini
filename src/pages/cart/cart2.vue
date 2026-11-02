@@ -1,7 +1,17 @@
 <template>
-  <view class="cart2">cart2</view>
+  <view>
+    <cartMain :safe-area-bottom="statusBarHeight"></cartMain>
+  </view>
 </template>
 
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+  import cartMain from './components/cartMain.vue'
+  import { onLoad } from '@dcloudio/uni-app'
+  import { ref } from 'vue'
 
-<style scoped></style>
+  const statusBarHeight = ref<number>()
+  onLoad(() => {
+    const sysInfo = uni.getSystemInfoSync()
+    statusBarHeight.value = sysInfo.safeAreaInsets?.bottom || 0
+  })
+</script>

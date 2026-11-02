@@ -117,31 +117,28 @@
       toUrl = goodId.value
         ? `/pages/${fromUrl.value}/${fromUrl.value}?id=${goodId.value}`
         : `/pages/${fromUrl.value}/${fromUrl.value}`
-
-      timer = setTimeout(() => {
-        // 登陆成功之后
-        // 如果是从商品详情页或者是别的页面跳转过来的 则回到对应页面
-        // 否则 回去首页
-        uni.navigateBack({
-          delta: 1,
-          fail: () => {
-            // 兜底：仅当页面栈中无上一页时触发（如直接扫码进入登录页）
-            const tabBarPages = ['pages/index/index', 'pages/cart/cart', 'pages/my/my']
-            const isTabBar = tabBarPages.some((p) => toUrl.includes(p))
-
-            if (isTabBar) {
-              uni.switchTab({ url: toUrl })
-            } else {
-              uni.redirectTo({ url: toUrl })
-            }
-          },
-        })
-
-        timer = null // ✅ 执行完毕后置空
-      }, 900)
-    } else {
-      uni.switchTab({ url: '/pages/my/my' })
     }
+    timer = setTimeout(() => {
+      // 登陆成功之后
+      // 如果是从商品详情页或者是别的页面跳转过来的 则回到对应页面
+      // 否则 回去首页
+      uni.navigateBack({
+        delta: 1,
+        fail: () => {
+          // 兜底：仅当页面栈中无上一页时触发（如直接扫码进入登录页）
+          const tabBarPages = ['pages/index/index', 'pages/cart/cart', 'pages/my/my']
+          const isTabBar = tabBarPages.some((p) => toUrl.includes(p))
+
+          if (isTabBar) {
+            uni.switchTab({ url: toUrl })
+          } else {
+            uni.redirectTo({ url: toUrl })
+          }
+        },
+      })
+
+      timer = null // ✅ 执行完毕后置空
+    }, 900)
   }
 
   // 企业版 获取用户手机号码 一键登录

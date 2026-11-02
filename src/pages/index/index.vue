@@ -31,7 +31,6 @@
   import { ref } from 'vue'
   import CustomNavigation from './components/CustomNavigation/CustomNavigation.vue'
   import CategoryPanel from './components/CategpryPanel/CategoryPanel.vue'
-  import XtxSwiper from '@/components/XtxSwiper/XtxSwiper.vue'
   import XtxGuessLike from '@/components/XtxGuessLike/XtxGuessLike.vue'
   import HotPanel from './components/HotPanel/HotPanel.vue'
   import { triggerHomeRefresh, provideHomeRefresh } from './composable/useHomeRefresh.js'

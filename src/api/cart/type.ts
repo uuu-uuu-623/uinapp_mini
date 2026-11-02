@@ -1,5 +1,4 @@
 // 该文件用于 购物车模块的api接口 请求参数和返回值的数据类型定义
-
 // 请求加入购物车的 请求参数
 export interface addCartParams {
   skuId: string
@@ -8,7 +7,7 @@ export interface addCartParams {
 
 // 请求加入购物车的 返回值
 export interface addCartResult {
-  // SPUID
+  // SPUID - 商品id
   id: string
   // 商品名称
   name: string
@@ -36,4 +35,14 @@ export interface addCartResult {
 }
 
 // 获取购物车列表返回值
-export type cartList = addCartResult
+export type CartList = addCartResult & {
+  checked?: boolean
+  chooseNum: number // 计数器双向绑定的值 (映射)
+  lastChooseNum: number // 上次成功提交的数量
+}
+
+// 请求修改购物车单品的 请求参数
+export interface UpdateCartParams {
+  selected?: boolean
+  count?: number
+}

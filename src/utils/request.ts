@@ -85,7 +85,7 @@ export const request = <T = any>(options: ReqOption): Promise<T> => {
 
         // http请求失败
         if (res.statusCode !== 200) {
-          uni.showToast({ title: `错误:${res.statusCode}`, icon: 'none' })
+          // uni.showToast({ title: `错误:${res.statusCode}`, icon: 'none' })
           return reject(res) //终止程序
         }
         // http请求成功

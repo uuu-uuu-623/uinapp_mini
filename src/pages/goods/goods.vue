@@ -56,7 +56,9 @@
           <view class="infoDesc">
             <view class="infoName">{{ goodsInfoData?.name }}</view>
             <view class="infoBrand">
-              <wd-tag variant="light" type="warning">{{ goodsInfoData?.brand?.name }}</wd-tag>
+              <wd-tag variant="light" type="warning" v-if="goodsInfoData?.brand">
+                {{ goodsInfoData?.brand?.name }}
+              </wd-tag>
               <wd-tag
                 variant="light"
                 v-for="item in goodsInfoData?.categories || []"
@@ -191,7 +193,27 @@
         </template>
       </wd-tabbar-item>
       <wd-tabbar-item name="service" title="客服" icon="headset"></wd-tabbar-item>
-      <wd-tabbar-item name="cart" title="购物车" icon="store"></wd-tabbar-item>
+      <wd-tabbar-item name="cart">
+        <template #icon>
+          <!-- 用 view 或 wd-button 包裹，并绑定独立的 click 事件 -->
+          <view
+            @click.stop="ToCartTwo"
+            style="display: flex; flex-direction: column; align-items: center"
+          >
+            <!-- 图标可以根据 isCollected 切换颜色或类型 -->
+            <wd-icon name="store" size="24px" />
+            <text
+              :style="{
+                fontSize: '20rpx',
+                lineHeight: '16px',
+                color: '#000',
+              }"
+            >
+              购物车
+            </text>
+          </view>
+        </template>
+      </wd-tabbar-item>
       <wd-tabbar-item name="addToCart">
         <wd-button
           type="warning"
@@ -470,6 +492,13 @@
   // 独立的收藏切换函数
   const toggleCollect = () => {
     isCollected.value = !isCollected.value
+  }
+
+  // 点击购物车 前往封装的非tabbar 购物车页面
+  const ToCartTwo = () => {
+    uni.navigateTo({
+      url: '/pages/cart/cart2',
+    })
   }
 
   // 未来点击加入购物车按钮的回调
