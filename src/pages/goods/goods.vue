@@ -1,4 +1,11 @@
 <template>
+  <wd-notice-bar
+    text="黑马不知怎么了,本商品不可结算订单,请勿购买"
+    prefix="no-result"
+    type="danger"
+    v-if="goodId === '4026198'"
+    custom-style="z-index=1000"
+  />
   <!-- 商品详情页 -->
   <view class="goods" :style="`{padding-bottom:${safeArea} ;}`">
     <!-- 骨架屏 -->
@@ -299,7 +306,7 @@
     }"
     buy-now-background-color="#1c64fd"
     @cart="AddCart"
-    @buy="BuyNow"
+    @buy="BuyNowToOrder"
   ></VkDataGoodsSkuPopup>
 </template>
 
@@ -515,7 +522,12 @@
 
   // 点击添加到购物车按钮发请求
   const AddCart = async (selectShop: SkuPopupEvent) => {
-    if (!selectShop.sku_name_arr.length) return
+    // 商品id为4026198的结算不了订单
+    if ((goodId.value = '4026198')) return
+    if (!selectShop.sku_name_arr.length) {
+      uni.showToast({ icon: 'none', title: '请选择要加入购物车的商品' })
+      return
+    }
     const isLogin = useStore.token ? true : false
     if (!isLogin) {
       uni.navigateTo({
@@ -539,7 +551,26 @@
   }
 
   // 点击立即购买按钮 发请求
-  const BuyNow = async () => {}
+  const BuyNowToOrder = async (selectShop: SkuPopupEvent) => {
+    // 商品id为4026198的结算不了订单
+    if ((goodId.value = '4026198')) return
+    if (!selectShop.sku_name_arr.length) {
+      uni.showToast({ icon: 'none', title: '请选择要购买的商品' })
+      return
+    }
+    const isLogin = useStore.token ? true : false
+    if (!isLogin) {
+      uni.navigateTo({
+        url: `/pages/login/login?fromUrl=goods&goodId=${goodsInfoData.value?.id}`,
+      })
+      return
+    }
+    // 带参跳转
+    uni.navigateTo({
+      url: `/pages_order/order/order?skuId=${selectShop._id}&count=${selectShop.buy_num}`,
+    })
+    isShowSkuPopup.value = false
+  }
 </script>
 
 <style scoped lang="scss">
