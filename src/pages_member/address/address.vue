@@ -4,9 +4,9 @@
       <wd-swipe-action v-for="item in addressList" :key="item.id">
         <wd-cell border value-align="left" ellipsis>
           <template #default>
-            <view class="addressBox">
+            <view class="addressBox" @click="onChangeOrderAddress(item)">
               <view class="consignee">
-                <text>{{ item.receiver }}</text>
+                <text>{{ item.receiver }} {{ item.contact }}</text>
                 <view class="default" v-if="item.isDefault === 1">默认</view>
               </view>
               <view class="addressBar">{{ item.fullLocation }} {{ item.address }}</view>
@@ -32,18 +32,25 @@
   <!-- 对话框 -->
   <wd-dialog />
   <wd-toast />
+  <!-- 消息通知 -->
+  <wd-notify />
 </template>
 
 <script lang="ts" setup>
   import { reqGetAddressList, reqDelAddress } from '@/api/member/addressManager'
   import type { addressList_result } from '@/api/member/addressManager/type'
+  import { useAddressStore } from '@/stores/modules/address'
   import { onShow, onLoad } from '@dcloudio/uni-app'
-  import { useDialog, useQueue, useToast } from '@wot-ui/ui/composables'
+  import { useDialog, useQueue, useToast, useNotify } from '@wot-ui/ui/composables'
   import { ref } from 'vue'
+
+  const addressStore = useAddressStore()
 
   const { closeOutside } = useQueue()
   const dialog = useDialog()
   const toast = useToast()
+  // 消息通知
+  const { showNotify } = useNotify()
 
   // 数据加载状态
   const loading = ref(false)
@@ -59,6 +66,7 @@
       const res = await reqGetAddressList()
       addressList.value = res
     } catch (error) {
+      console.log(error)
     } finally {
       loading.value = false
     }
@@ -68,8 +76,17 @@
     await getAddressList()
   })
 
-  onLoad(async () => {
+  const fromUrl = ref('')
+  const isFristShow = ref(true)
+  onLoad(async (options) => {
+    if (options?.fromUrl) fromUrl.value = options.fromUrl
     await getAddressList()
+
+    if (isFristShow.value && fromUrl.value !== 'order') {
+      // 主要通知
+      showNotify({ type: 'primary', message: '可向左滑动', closable: true, duration: 2000 })
+      isFristShow.value = false
+    }
   })
 
   // 滑动组件的 两个操作 回调函数
@@ -115,6 +132,13 @@
   // 点击新增地址的回调函数
   const addNewAddress = () => {
     uni.navigateTo({ url: `/pages_member/AddressForm/AddressForm` })
+  }
+
+  // 从预付订单页面跳来这 选择地址
+  const onChangeOrderAddress = (addressItem: addressList_result) => {
+    if (fromUrl.value !== 'order') return
+    addressStore.onChangeReceiveAddress(addressItem)
+    uni.navigateBack()
   }
 </script>
 

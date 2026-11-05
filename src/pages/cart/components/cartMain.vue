@@ -111,14 +111,9 @@
       <view
         v-if="userStore.token && cartList.length"
         class="toolbar"
-        :style="
-          p.safeAreaBottom
-            ? {
-                paddingBottom: `${p.safeAreaBottom * 2}rpx`,
-                height: `${p.safeAreaBottom * 2 + 100}rpx`,
-              }
-            : {}
-        "
+        :style="{
+          paddingBottom: p.safeAreaBottom ? `${p.safeAreaBottom}px` : `20rpx`,
+        }"
       >
         <view class="allAndPrice">
           <view>
@@ -133,7 +128,9 @@
           </view>
         </view>
         <view class="check-out">
-          <wd-button round size="small">去结算({{ collectSelectedSkuIdList.length }})</wd-button>
+          <wd-button round size="small" @click="ToOrder">
+            去结算({{ collectSelectedSkuIdList.length }})
+          </wd-button>
         </view>
       </view>
     </scroll-view>
@@ -151,7 +148,7 @@
   import type { CartList } from '@/api/cart/type'
   import { reqCartList, reqDelCart, reqUpdateCart, reqCartCheckedAll } from '@/api/cart'
 
-  // 接收cart2 父组件传来的底部安全距离
+  // 获取父组件cart2 传来的底部安全区域
   const p = defineProps<{ safeAreaBottom?: number }>()
 
   const { closeOutside } = useQueue()
@@ -220,7 +217,6 @@
           lastChooseNum: num, // 初始基准
         }
       })
-      console.log(res)
     } catch {
     } finally {
       loading.value = false
@@ -366,6 +362,17 @@
     }
 
     await delCart(ids)
+  }
+
+  // 点击去结算的回调函数 前往订单页面
+  const ToOrder = () => {
+    if (!collectSelectedSkuIdList.value.length) {
+      toast.show('请选择要结算的商品')
+      return
+    }
+    uni.navigateTo({
+      url: '/pages_order/order/order',
+    })
   }
 </script>
 
@@ -563,7 +570,6 @@
     justify-content: space-between;
     padding: 20rpx 10rpx;
     width: 750rpx;
-    height: 100rpx;
     background-color: #fff;
     border-bottom: 1px solid #eee;
 

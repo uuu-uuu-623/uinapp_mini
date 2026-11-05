@@ -9,7 +9,7 @@
   import { onLoad } from '@dcloudio/uni-app'
   import { ref } from 'vue'
 
-  const statusBarHeight = ref<number>()
+  const statusBarHeight = ref<number>(0)
   onLoad(() => {
     const sysInfo = uni.getSystemInfoSync()
     statusBarHeight.value = sysInfo.safeAreaInsets?.bottom || 0
