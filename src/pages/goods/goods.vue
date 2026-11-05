@@ -1,13 +1,6 @@
 <template>
-  <wd-notice-bar
-    text="黑马不知怎么了,本商品不可结算订单,请勿购买"
-    prefix="no-result"
-    type="danger"
-    v-if="goodsInfoData.id === '4026198' || '1379052170040578049'"
-    custom-style="z-index=1000"
-  />
   <!-- 商品详情页 -->
-  <view class="goods" :style="`{padding-bottom:${safeArea} ;}`">
+  <view class="goods" :style="`{padding-bottom:${safeArea} px;}`">
     <!-- 骨架屏 -->
     <!-- 轮播图区块 -->
     <wd-skeleton
@@ -522,11 +515,6 @@
 
   // 点击添加到购物车按钮发请求
   const AddCart = async (selectShop: SkuPopupEvent) => {
-    // 商品id为4026198的结算不了订单
-    if (goodsInfoData.value.id === '4026198' || '1379052170040578049') {
-      uni.showToast({ icon: 'error', title: '请勿添加' })
-      return
-    }
     if (!selectShop.sku_name_arr.length) {
       uni.showToast({ icon: 'none', title: '请选择要加入购物车的商品' })
       return
@@ -555,11 +543,6 @@
 
   // 点击立即购买按钮 发请求
   const BuyNowToOrder = async (selectShop: SkuPopupEvent) => {
-    // 商品id为4026198的结算不了订单
-    if (goodsInfoData.value.id === '4026198' || '1379052170040578049') {
-      uni.showToast({ icon: 'error', title: '请勿购买' })
-      return
-    }
     if (!selectShop.sku_name_arr.length) {
       uni.showToast({ icon: 'none', title: '请选择要购买的商品' })
       return
