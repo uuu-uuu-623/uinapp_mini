@@ -262,7 +262,6 @@
         // 没有跳转参数 则发送获取用户在购物车中选择的预付订单数据
         res = await reqPreOrder()
       }
-      console.log(res)
       addressList.value = res.userAddresses
       orderFee.value = res.summary
       goodList.value = res.goods
@@ -304,8 +303,6 @@
   onLoad(async (options) => {
     // 获取在商品详情页跳转传递的参数
     if (options && options.skuId) {
-      console.log(options)
-
       Object.assign(buyNowParams.value, { ...options })
     }
     safeArea.value = safeAreahook.getsafeArea() ?? 0
@@ -353,7 +350,6 @@
           return { count: Number(item.count), skuId: item.skuId }
         }),
       })
-      console.log(submitParams.value)
 
       if (!submitParams.value.addressId) {
         showNotify({ type: 'warning', message: '请选择地址', closable: true, duration: 2000 })
@@ -362,8 +358,8 @@
       // 发送请求
       const res = await reqsubmitOrder(submitParams.value)
       if (res.id) {
-        // 跳转到商品详情页
-        uni.navigateTo({
+        // 关闭当前页面 跳转到商品详情页 携带订单id
+        uni.redirectTo({
           url: `/pages_order/orderDetail/orderDetail?id=${res.id}`,
         })
       }
