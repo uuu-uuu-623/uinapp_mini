@@ -44,25 +44,33 @@
         <view @click="closeOutside" v-else>
           <wd-swipe-action v-for="item in cartList" :key="item.skuId">
             <template #default>
-              <view class="goods-card" @click="ToGoodDetail(item.id)">
+              <view
+                class="goods-card"
+                @click="ToGoodDetail(item)"
+                :class="{ 'is-invalid': !item.isEffective || !(item.stock > 0) }"
+              >
                 <!-- 左侧：勾选框 + 商品图片 -->
                 <view class="goods-left">
                   <!-- 给单选框套一个盒子 繁殖事件冒泡 -->
                   <view @click.stop>
                     <wd-checkbox
-                      :disabled="isLoading(item.skuId)"
+                      :disabled="isLoading(item.skuId) || !item.isEffective || !(item.stock > 0)"
                       v-model="item.checked"
                       @change="onChangeCheckBox(item)"
                     ></wd-checkbox>
                   </view>
-                  <wd-img
-                    :src="item.picture"
-                    width="200rpx"
-                    height="200rpx"
-                    image-mode="aspectFit"
-                    lazy-load
-                    fade-show
-                  ></wd-img>
+                  <view class="img-wrap">
+                    <wd-img
+                      :src="item.picture"
+                      width="200rpx"
+                      height="200rpx"
+                      image-mode="aspectFit"
+                      lazy-load
+                      fade-show
+                    ></wd-img>
+                    <text v-if="!item.isEffective" class="invalid-tag">已失效</text>
+                    <text v-else-if="!(item.stock > 0)" class="invalid-tag">无库存</text>
+                  </view>
                 </view>
 
                 <!-- 右侧：商品信息 -->
@@ -86,7 +94,7 @@
                         v-model="item.chooseNum"
                         :min="item.stock && item.stock > 0 ? 1 : 0"
                         :max="item.stock && item.stock > 0 ? item.stock : 0"
-                        :disabled="isLoading(item.skuId) || !(item.stock && item.stock > 0)"
+                        :disabled="isLoading(item.skuId) || !item.isEffective || !(item.stock > 0)"
                         @change="onChangeInputNum(item)"
                       />
                     </view>
@@ -137,6 +145,7 @@
   </view>
 
   <wd-dialog></wd-dialog>
+  <wd-toast />
 </template>
 
 <script lang="ts" setup>
@@ -195,9 +204,9 @@
   // 收集页面中用户选中的商品
   const collectSelectedSkuIdList = computed(() => {
     const arr: string[] = []
-    cartList.value.map((item) => {
-      if (item.checked) arr.push(item.skuId)
-    })
+    cartList.value
+      .filter((i) => i.checked && i.isEffective && (i.stock ?? 0) > 0 && i.chooseNum > 0)
+      .map((i) => i.skuId)
     return arr
   })
 
@@ -209,7 +218,7 @@
       const res = await reqCartList()
       // 获取数据
       cartList.value = (res ?? []).map((i) => {
-        const num = i.chooseNum ?? i.count ?? 1
+        const num = i.chooseNum ?? 1
         return {
           ...i,
           checked: i.selected ?? false,
@@ -247,15 +256,21 @@
   }
 
   // 点击商品的 回调函数
-  const ToGoodDetail = (goodsId: string) => {
+  const ToGoodDetail = (cart: CartList) => {
+    if (isLoading(cart.skuId) || !cart.isEffective || !(cart.stock > 0)) return
     uni.navigateTo({
-      url: `/pages/goods/goods?id=${goodsId}`,
+      url: `/pages/goods/goods?id=${cart.id}`,
     })
   }
 
   // 点击单选框的回调函数
   const onChangeCheckBox = async (cart: CartList) => {
-    if (isLoading(cart.skuId)) return
+    // 第二次快速点击时直接 return，
+    // 但 cart.checked 已被 v-model 改掉，导致 UI 与服务器状态不一致。
+    if (isLoading(cart.skuId)) {
+      cart.checked = !cart.checked //回滚回滚状态
+      return
+    }
     loadingSkuIds.value.add(cart.skuId)
     // 取反是为了存储旧值 因为这是change触发的函数
     const prevChecked = !cart.checked // 存储旧值
@@ -278,7 +293,9 @@
     // 程序化修改 item.checked 不会触发 @change   因为@change 是用户交互事件
     cartList.value.forEach((item) => (item.checked = target))
     // 记录上一次的 所有商品的单选框状态  方便失败回滚
+    // 改为先记录再修改：
     const prevChecked = cartList.value.map((i) => i.checked)
+    cartList.value.forEach((item) => (item.checked = target))
 
     // 所以要发请求 全选/取消全选
     try {
@@ -366,6 +383,11 @@
 
   // 点击去结算的回调函数 前往订单页面
   const ToOrder = () => {
+    const invalid = cartList.value.filter((i) => i.checked && (!i.isEffective || !(i.stock > 0)))
+    if (invalid.length) {
+      toast.warning(`有 ${invalid.length} 件商品已失效，请先移除`)
+      return
+    }
     if (!collectSelectedSkuIdList.value.length) {
       toast.show('请选择要结算的商品')
       return
@@ -466,6 +488,9 @@
     white-space: nowrap;
   }
 
+  .is-invalid {
+    opacity: 0.55;
+  }
   // 商品信息
   .goods-card {
     display: flex;
@@ -488,12 +513,29 @@
         }
       }
 
-      .wd-img {
-        border-radius: 12rpx;
+      .img-wrap {
+        position: relative;
         flex-shrink: 0;
+
+        .invalid-tag {
+          position: absolute;
+          top: 0;
+          left: 0;
+          padding: 4rpx 12rpx;
+          font-size: 22rpx;
+          color: #fff;
+          background: rgba(0, 0, 0, 0.5);
+          border-radius: 12rpx 0 12rpx 0;
+          white-space: nowrap;
+          pointer-events: none;
+        }
+
+        .wd-img {
+          border-radius: 12rpx;
+          flex-shrink: 0;
+        }
       }
     }
-
     .goods-right {
       flex: 1;
       display: flex;
@@ -557,51 +599,51 @@
         }
       }
     }
-  }
 
-  // 底部占位空盒子
-  .toolbar {
-    z-index: 100;
-    box-sizing: border-box;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    display: flex;
-    justify-content: space-between;
-    padding: 20rpx 10rpx;
-    width: 750rpx;
-    background-color: #fff;
-    border-bottom: 1px solid #eee;
-
-    .allAndPrice {
-      flex: 1;
+    // 底部占位空盒子
+    .toolbar {
+      z-index: 100;
+      box-sizing: border-box;
+      position: fixed;
+      bottom: 0;
+      left: 0;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding-left: 32rpx;
+      padding: 20rpx 10rpx;
+      width: 750rpx;
+      background-color: #fff;
+      border-bottom: 1px solid #eee;
 
-      .totalPrice {
-        color: #999;
-        .iconPrice {
-          font-size: 28rpx;
-          margin-right: 2rpx;
-          color: #ff4d4f;
-        }
+      .allAndPrice {
+        flex: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-left: 32rpx;
 
-        .current-price {
-          font-size: 32rpx;
-          font-weight: bold;
-          color: #ff4d4f; /* 通常用红色突出价格 */
+        .totalPrice {
+          color: #999;
+          .iconPrice {
+            font-size: 28rpx;
+            margin-right: 2rpx;
+            color: #ff4d4f;
+          }
+
+          .current-price {
+            font-size: 32rpx;
+            font-weight: bold;
+            color: #ff4d4f; /* 通常用红色突出价格 */
+          }
         }
       }
-    }
 
-    .check-out {
-      flex: 1;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      padding-right: 10rpx;
+      .check-out {
+        flex: 1;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        padding-right: 10rpx;
+      }
     }
   }
 </style>
