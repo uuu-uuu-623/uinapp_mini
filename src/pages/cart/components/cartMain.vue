@@ -44,22 +44,21 @@
         <view @click="closeOutside" v-else>
           <wd-swipe-action v-for="item in cartList" :key="item.skuId">
             <template #default>
-              <view
-                class="goods-card"
-                @click="ToGoodDetail(item)"
-                :class="{ 'is-invalid': !item.isEffective || !(item.stock > 0) }"
-              >
+              <view class="goods-card" @click="ToGoodDetail(item)">
                 <!-- 左侧：勾选框 + 商品图片 -->
                 <view class="goods-left">
                   <!-- 给单选框套一个盒子 繁殖事件冒泡 -->
                   <view @click.stop>
                     <wd-checkbox
-                      :disabled="isLoading(item.skuId) || !item.isEffective || !(item.stock > 0)"
+                      :disabled="isLoading(item.skuId)"
                       v-model="item.checked"
                       @change="onChangeCheckBox(item)"
                     ></wd-checkbox>
                   </view>
-                  <view class="img-wrap">
+                  <view
+                    class="img-wrap"
+                    :class="{ 'is-invalid': !item.isEffective || !(item.stock > 0) }"
+                  >
                     <wd-img
                       :src="item.picture"
                       width="200rpx"
@@ -74,7 +73,10 @@
                 </view>
 
                 <!-- 右侧：商品信息 -->
-                <view class="goods-right">
+                <view
+                  class="goods-right"
+                  :class="{ 'is-invalid': !item.isEffective || !(item.stock > 0) }"
+                >
                   <view class="goods-name">{{ item.name }}</view>
                   <view class="goods-desc">{{ item.attrsText }}</view>
                   <view class="goods-bottom">
@@ -115,7 +117,7 @@
 
       <XtxGuessLike ref="guessLikeRef"></XtxGuessLike>
 
-      <!-- 底部占位空盒子 -->
+      <!-- 底部盒子 -->
       <view
         v-if="userStore.token && cartList.length"
         class="toolbar"
@@ -181,7 +183,11 @@
   // 全选状态
   const checkedAll = computed({
     get: () => {
-      const AllIsTrue = cartList.value.length > 0 && cartList.value.every((item) => item.checked)
+      // 只要有效的商品全选了 那么全选按钮就为true
+      // 1.筛选有效商品
+      const effectiveShops = cartList.value.filter((item) => item.stock > 0 && item.isEffective)
+      // 2.存在有效商品 并且全选有效商品
+      const AllIsTrue = effectiveShops.length > 0 && effectiveShops.every((item) => item.checked)
       if (AllIsTrue) return true
       else return false
     },
@@ -203,11 +209,7 @@
 
   // 收集页面中用户选中的商品
   const collectSelectedSkuIdList = computed(() => {
-    const arr: string[] = []
-    cartList.value
-      .filter((i) => i.checked && i.isEffective && (i.stock ?? 0) > 0 && i.chooseNum > 0)
-      .map((i) => i.skuId)
-    return arr
+    return cartList.value.filter((i) => i.checked && i.chooseNum > 0).map((i) => i.skuId)
   })
 
   // 请求获取 用户的购物车信息
@@ -288,7 +290,11 @@
   const onChangeAll = async () => {
     // 先改页面ui  再发请求
     // 没有商品则return
-    if (!cartList.value.length) return
+    if (!cartList.value.length) {
+      toast.warning('当前购物车没有商品,快去购物吧')
+      return
+    }
+
     const target = !checkedAll.value // 当前是否全选 → 取反即目标
     // 程序化修改 item.checked 不会触发 @change   因为@change 是用户交互事件
     cartList.value.forEach((item) => (item.checked = target))
@@ -404,6 +410,7 @@
     flex-direction: column;
     height: 100vh;
     background-color: #f7f8fa;
+    padding-bottom: 40rpx;
 
     .unLogin {
       display: flex;
@@ -599,51 +606,51 @@
         }
       }
     }
+  }
 
-    // 底部占位空盒子
-    .toolbar {
-      z-index: 100;
-      box-sizing: border-box;
-      position: fixed;
-      bottom: 0;
-      left: 0;
+  // 底部占位空盒子
+  .toolbar {
+    z-index: 101;
+    box-sizing: border-box;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 20rpx 10rpx;
+    width: 750rpx;
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+
+    .allAndPrice {
+      flex: 1;
       display: flex;
       justify-content: space-between;
-      padding: 20rpx 10rpx;
-      width: 750rpx;
-      background-color: #fff;
-      border-bottom: 1px solid #eee;
+      align-items: center;
+      padding-left: 32rpx;
 
-      .allAndPrice {
-        flex: 1;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-left: 32rpx;
+      .totalPrice {
+        color: #999;
+        .iconPrice {
+          font-size: 28rpx;
+          margin-right: 2rpx;
+          color: #ff4d4f;
+        }
 
-        .totalPrice {
-          color: #999;
-          .iconPrice {
-            font-size: 28rpx;
-            margin-right: 2rpx;
-            color: #ff4d4f;
-          }
-
-          .current-price {
-            font-size: 32rpx;
-            font-weight: bold;
-            color: #ff4d4f; /* 通常用红色突出价格 */
-          }
+        .current-price {
+          font-size: 32rpx;
+          font-weight: bold;
+          color: #ff4d4f; /* 通常用红色突出价格 */
         }
       }
+    }
 
-      .check-out {
-        flex: 1;
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        padding-right: 10rpx;
-      }
+    .check-out {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding-right: 10rpx;
     }
   }
 </style>
