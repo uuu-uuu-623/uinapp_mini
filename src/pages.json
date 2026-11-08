@@ -106,6 +106,7 @@
   },
   // 分包加载规则
   "subPackages": [
+    // 个人主页分包 + 地址模块分包
     {
       "root": "pages_member",
       "pages": [
@@ -134,6 +135,33 @@
           "style": {
             "navigationStyle": "custom",
             "navigationBarTitleText": ""
+          }
+        }
+      ]
+    },
+    // 订单模块分包
+    {
+      "root": "pages_order",
+      "pages": [
+        {
+          "path": "order/order",
+          "style": {
+            "navigationBarTitleText": "确认订单"
+          }
+        },
+        {
+          "path": "orderDetail/orderDetail",
+          "style": {
+            "navigationBarTitleText": "",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "orderWuLiu/orderWuLiu",
+          "style": {
+            "navigationBarTitleText": "物流信息",
+            "animationType": "slide-in-right",
+            "animationDuration": 300
           }
         }
       ]
