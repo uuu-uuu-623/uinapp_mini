@@ -119,7 +119,6 @@
 <style lang="scss">
   .cate-grid-item {
     width: 120rpx;
-    height: 160rpx;
     box-sizing: border-box;
   }
 

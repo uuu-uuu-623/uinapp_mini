@@ -1,5 +1,8 @@
 <template>
-  <view class="cart">
+  <view
+    class="cart"
+    :style="{ paddingBottom: userStore.token && cartList.length > 0 ? '100rpx' : 0 }"
+  >
     <scroll-view
       class="scroll-area"
       scroll-y
@@ -119,7 +122,7 @@
 
       <!-- 底部盒子 -->
       <view
-        v-if="userStore.token && cartList.length"
+        v-if="userStore.token && cartList.length > 0"
         class="toolbar"
         :style="{
           paddingBottom: p.safeAreaBottom ? `${p.safeAreaBottom}px` : `20rpx`,
@@ -220,7 +223,7 @@
       const res = await reqCartList()
       // 获取数据
       cartList.value = (res ?? []).map((i) => {
-        const num = i.chooseNum ?? 1
+        const num = i.count ?? 1
         return {
           ...i,
           checked: i.selected ?? false,
@@ -229,6 +232,7 @@
         }
       })
     } catch {
+      console.log('获取购物车信息失败')
     } finally {
       loading.value = false
     }
@@ -410,7 +414,6 @@
     flex-direction: column;
     height: 100vh;
     background-color: #f7f8fa;
-    padding-bottom: 40rpx;
 
     .unLogin {
       display: flex;
@@ -436,8 +439,10 @@
     flex: 1;
     min-height: 0; /* 关键！防止被内容撑开 */
   }
+
   .cartInfo {
     padding: 20rpx;
+
     .tips-bar {
       display: flex;
       justify-content: space-between;
@@ -446,7 +451,7 @@
       background-color: #fff;
       margin-bottom: 20rpx;
       border-radius: 16rpx;
-      box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+      box-shadow: 0 4rpx 12rpx rgb(0 0 0 / 3%);
 
       .tips-left {
         display: flex;
@@ -498,6 +503,7 @@
   .is-invalid {
     opacity: 0.55;
   }
+
   // 商品信息
   .goods-card {
     display: flex;
@@ -506,7 +512,7 @@
     border-radius: 16rpx;
     padding: 20rpx;
     margin-bottom: 20rpx;
-    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4rpx 12rpx rgb(0 0 0 / 3%);
 
     .goods-left {
       display: flex;
@@ -531,8 +537,8 @@
           padding: 4rpx 12rpx;
           font-size: 22rpx;
           color: #fff;
-          background: rgba(0, 0, 0, 0.5);
-          border-radius: 12rpx 0 12rpx 0;
+          background: rgb(0 0 0 / 50%);
+          border-radius: 12rpx 0;
           white-space: nowrap;
           pointer-events: none;
         }
@@ -543,6 +549,7 @@
         }
       }
     }
+
     .goods-right {
       flex: 1;
       display: flex;
@@ -600,7 +607,7 @@
           /* 原价删除线样式 */
           .original-price {
             font-size: 24rpx;
-            color: #999999;
+            color: #999;
             text-decoration: line-through; /* 核心：删除线 */
           }
         }
@@ -623,14 +630,15 @@
     border-bottom: 1px solid #eee;
 
     .allAndPrice {
-      flex: 1;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
+      gap: 40rpx;
       padding-left: 32rpx;
 
       .totalPrice {
         color: #999;
+
         .iconPrice {
           font-size: 28rpx;
           margin-right: 2rpx;
@@ -646,7 +654,6 @@
     }
 
     .check-out {
-      flex: 1;
       display: flex;
       justify-content: flex-end;
       align-items: center;

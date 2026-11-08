@@ -7,7 +7,7 @@ export interface PreOrderData {
   summary: summary
 }
 
-// 预付订单数据类型
+// ============== 预付订单数据类型 ================
 /**用户地址信息*/
 export interface userAddress {
   id: string
@@ -103,4 +103,105 @@ export interface submitOrder_Params {
   payChannel: 1 | 2
   // 买家留言
   buyerMessage: string
+}
+
+// 订单管理 获取订单详情的返回值数据类型定义
+export interface orderDetailData extends orderDetail {
+  skus: orderDetail_skus[]
+}
+
+// 订单返回值详细数据定义
+export interface orderDetail {
+  /**订单编号 */
+  id: string
+  /**下单时间 */
+  createTime: string
+  /**支付方式，1为在线支付，2为货到付款 */
+  payType: number
+  /**订单状态 1为待付款、2为待发货、3为待收货、4为待评价、5为已完成、6为已取消*/
+  orderState: number
+  /**付款截止时间：剩余的秒数，前台转换成分钟：秒数 */
+  payLatestTime: number
+  /**倒计时--剩余的秒数 -1 表示已经超时，正数表示倒计时未结束 */
+  countdown: number
+  /**邮费 */
+  postFee: string
+  /**实付金额 */
+  payMoney: string
+  /**支付渠道，1支付宝、2微信 */
+  payChannel: number
+  /**金额合计 */
+  totalMoney: string
+  /**数量合计 */
+  totalNum: string
+  /**配送时间类型，1为不限，2为工作日，3为双休或假日 */
+  deliveryTimeType: number
+  /**收货人 */
+  receiverContact: string
+  /**收货人手机 */
+  receiverMobile: string
+  /**收货人地址 */
+  receiverAddress: string
+  /**付款时间 */
+  payTime: string | null
+  /**发货时间 */
+  consignTime: string | null
+  /**预计到货时间 */
+  arrivalEstimatedTime: string | null
+  /**交易完成时间 */
+  endTime: string | null
+  /**交易关闭时间 */
+  closeTime: string | null
+  /**完成评价时间 */
+  evaluationTime: string | null
+}
+
+/**订单状态枚举 -
+ * 1为待付款、2为待发货、3为待收货、4为待评价、5为已完成、6为已取消 */
+export enum orderStateEnum {
+  /** 待付款 */
+  DaiFuKuan = 1,
+  /** 待发货 */
+  DaiFaHuo = 2,
+  /** 待收货 */
+  DaiShouHuo = 3,
+  /** 待评价 */
+  DaiPingJia = 4,
+  /** 已完成 */
+  YiWanCheng = 5,
+  /** 已取消 */
+  YiQuXiao = 6,
+}
+
+// 订单详情中skus 数据类型定义
+/** 商品集合 */
+export interface orderDetail_skus {
+  /**sku id */
+  id: string
+  /**spuId */
+  spuId: string
+  /**属性说明 */
+  attrsText: string
+  /** 商品名称*/
+  name: string
+  /**数量 */
+  quantity: string
+  /**图片地址 */
+  image: string
+  /**小计 */
+  totalMoney: number | null
+  /**实付金额 */
+  realPay: number
+  /**单价 */
+  curPrice: number
+  /** 属性集合 */
+  properties: attrList[]
+}
+
+// 订单详情中skus的properties 属性集合 数据类型定义
+export interface attrList {
+  /** 属性名称，如 颜色*/
+  propertyMainName: string
+  /** 属性值名称，如 黑色*/
+  propertyValueName: string
 }

@@ -3,7 +3,7 @@
 export const useSafeArea = () => {
   const getsafeArea = () => {
     const sysInfo = uni.getSystemInfoSync()
-    return sysInfo.safeAreaInsets?.bottom || 0
+    return sysInfo.safeAreaInsets || null
   }
 
   return { getsafeArea }
