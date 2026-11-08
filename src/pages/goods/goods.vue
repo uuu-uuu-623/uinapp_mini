@@ -165,7 +165,14 @@
     </wd-card>
 
     <!-- 底部 -->
-    <wd-tabbar fixed bordered safe-area-inset-bottom placeholder custom-style="padding-top:20rpx">
+    <wd-tabbar
+      fixed
+      bordered
+      safe-area-inset-bottom
+      placeholder
+      custom-style="padding-top:20rpx"
+      v-show="loading"
+    >
       <!-- 将“收藏”替换为自定义的点击项，并手动控制其激活样式 -->
       <wd-tabbar-item name="collect">
         <template #icon>
@@ -504,28 +511,41 @@
   // 未来点击加入购物车按钮的回调
   // 展示sku 选择规格 数量加减 确认按钮 请求加入购物车 成功加入购物车
   const openSkuPopup_cart = () => {
+    if (loading.value) return
     isShowSkuPopup.value = true
     mode.value = btnMode.Cart
   }
 
   const openSkuPopup_buy = () => {
+    if (loading.value) return
     isShowSkuPopup.value = true
     mode.value = btnMode.Buy
   }
 
-  // 点击添加到购物车按钮发请求
-  const AddCart = async (selectShop: SkuPopupEvent) => {
-    if (!selectShop.sku_name_arr.length) {
-      uni.showToast({ icon: 'none', title: '请选择要加入购物车的商品' })
-      return
+  // 统一处理 SKU 选择校验与登录态检查
+  // 通过校验返回 true，未通过则自动处理提示/跳转并返回 false
+  const validateBeforeAction = (selectShop: SkuPopupEvent, actionName: string): boolean => {
+    // 1. SKU 完整性校验
+    if (!selectShop.sku_name_arr?.length) {
+      uni.showToast({ icon: 'none', title: `请选择要${actionName}的商品` })
+      return false
     }
-    const isLogin = useStore.token ? true : false
-    if (!isLogin) {
+
+    // 2. 登录态校验
+    if (!useStore.token) {
+      isShowSkuPopup.value = false // 跳转前关闭弹窗，避免返回时状态异常
       uni.navigateTo({
         url: `/pages/login/login?fromUrl=goods&goodId=${goodsInfoData.value?.id}`,
       })
-      return
+      return false
     }
+
+    return true
+  }
+
+  // 点击添加到购物车按钮发请求
+  const AddCart = async (selectShop: SkuPopupEvent) => {
+    if (!validateBeforeAction(selectShop, '加入购物车')) return
 
     let select: addCartParams = {
       skuId: selectShop._id,
@@ -543,22 +563,12 @@
 
   // 点击立即购买按钮 发请求
   const BuyNowToOrder = async (selectShop: SkuPopupEvent) => {
-    if (!selectShop.sku_name_arr.length) {
-      uni.showToast({ icon: 'none', title: '请选择要购买的商品' })
-      return
-    }
-    const isLogin = useStore.token ? true : false
-    if (!isLogin) {
-      uni.navigateTo({
-        url: `/pages/login/login?fromUrl=goods&goodId=${goodsInfoData.value?.id}`,
-      })
-      return
-    }
+    if (!validateBeforeAction(selectShop, '购买')) return
+    isShowSkuPopup.value = false
     // 带参跳转
     uni.navigateTo({
       url: `/pages_order/order/order?skuId=${selectShop._id}&count=${selectShop.buy_num}`,
     })
-    isShowSkuPopup.value = false
   }
 </script>
 
