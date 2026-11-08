@@ -1,8 +1,7 @@
 <template>
   <!-- 数据加载中 -->
   <view v-if="loading" class="loading-state">
-    <wd-loading size="48rpx" />
-    <text class="loading-text">加载中...</text>
+    <wd-loading size="48rpx" text="加载中..." />
   </view>
   <view v-else class="order-container">
     <!-- 页面内容区 -->
@@ -123,7 +122,11 @@
     </view>
 
     <!-- 底部提交栏 -->
-    <view class="bottom-bar" :style="{ paddingBottom: safeArea ? `${safeArea}px` : `20rpx` }">
+    <view
+      v-show="deliveryPopup === false"
+      class="bottom-bar"
+      :style="{ paddingBottom: safeAreainsets?.bottom ? `${safeAreainsets?.bottom}px` : `20rpx` }"
+    >
       <view class="total-price">
         <text class="symbol">￥</text>
         <text class="price">{{ orderFee?.totalPayPrice.toFixed(2) }}</text>
@@ -165,7 +168,7 @@
   import { ref, computed, toRefs } from 'vue'
   import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
   import { useSafeArea } from '@/composables/useSafeArea'
-  import { reqPreOrder, reqPreOrderBuyNow, reqsubmitOrder } from '@/api/order'
+  import { reqPreOrder, reqPreOrderBuyNow, reqsubmitOrder, reqBuyAgginOrderData } from '@/api/order'
   import type {
     userAddress,
     good,
@@ -186,7 +189,7 @@
   const { selectedAddress } = toRefs(addressStore)
 
   const safeAreahook = useSafeArea()
-  const safeArea = ref(0)
+  const safeAreainsets = ref<UniApp.SafeAreaInsets>()
 
   // 预付订单信息加载状态
   const loading = ref(false)
@@ -211,7 +214,7 @@
   const deliveryLabel = ref<string>('时间不限 (周一至周日)')
 
   // 用户地址
-  const addressList = ref<userAddress[]>([])
+  // const addressList = ref<userAddress[]>([])
   // 预付的订单商品
   const goodList = ref<good[]>([])
   // 订单的费用
@@ -232,6 +235,9 @@
 
   // 双向绑定订单备注输入框的值
   const inputValue = ref<string>('')
+
+  // 从订单详情页跳转携带的订单id (再次购买的订单)
+  const buyAggin_orderId = ref<string>('')
 
   // 请求提交订单的 请求参数
   const submitParams = ref<submitOrder_Params>({
@@ -255,31 +261,37 @@
     loading.value = true
     try {
       let res: PreOrderData
-      if (buyNowParams.value.skuId && buyNowParams.value.count) {
+      if (buyNowParams.value.skuId && Number(buyNowParams.value.count) > 0) {
         // 如果有跳转参数 则发送获取立即购买订单请求
         res = await reqPreOrderBuyNow(buyNowParams.value)
+      } else if (buyAggin_orderId.value) {
+        // 如果有从订单详情页 跳转携带的订单id (再次购买的订单)
+        // 发送再次购买的请求
+        res = await reqBuyAgginOrderData(buyAggin_orderId.value)
       } else {
         // 没有跳转参数 则发送获取用户在购物车中选择的预付订单数据
         res = await reqPreOrder()
+        console.log(res)
       }
-      addressList.value = res.userAddresses
+      // addressList.value = res.userAddresses
       orderFee.value = res.summary
       goodList.value = res.goods
 
       // 无论用户是否在地址管理页选择与否 都要查找默认地址
       // 查找默认地址
-      const newDefault = res.userAddresses.find((item) => item.isDefault === 1)
+      const newDefault = res.userAddresses.find((item) => item.isDefault === 1) ?? null
       if (newDefault) {
         // 如果用户本身有默认地址或者修改了新的默认地址 则赋值给 defaultAddress
         defaultAddress.value = newDefault
       } else if (!defaultAddress.value?.id) {
         // 如果本来没有默认地址 或者修改了原本默认地址
-        defaultAddress.value = null
+        // 取第一个兜底或置空，避免显示过期默认地址
+        defaultAddress.value = res.userAddresses[0] ?? null
       }
     } catch (error) {
       console.log(error)
       // 请求失败 重置数据
-      addressList.value = []
+      // addressList.value = []
       goodList.value = []
       defaultAddress.value = null // 失败时也要清空
       orderFee.value = null
@@ -305,7 +317,10 @@
     if (options && options.skuId) {
       Object.assign(buyNowParams.value, { ...options })
     }
-    safeArea.value = safeAreahook.getsafeArea() ?? 0
+    if (options && options.orderId) {
+      buyAggin_orderId.value = options.orderId
+    }
+    safeAreainsets.value = safeAreahook.getsafeArea() as UniApp.SafeAreaInsets
     await getPreOrder()
   })
 
@@ -373,7 +388,7 @@
 
   onUnload(() => {
     // 清除数据
-    addressStore.resetData()
+    // addressStore.resetData()
     // 重置请求参数
     Object.assign(buyNowParams.value, {
       skuId: '',
@@ -621,6 +636,7 @@
     left: 0;
     right: 0;
     bottom: 0;
+
     // height: 120rpx;
     background-color: #fff;
     display: flex;
@@ -628,8 +644,8 @@
     justify-content: space-between;
     padding: 20rpx 30rpx 0;
     box-sizing: border-box;
-    box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.05);
-    z-index: 100;
+    box-shadow: 0 -4rpx 20rpx rgb(0 0 0 / 5%);
+    z-index: 1;
 
     .total-price {
       display: flex;
@@ -650,13 +666,12 @@
 
     /* 深度选择器覆盖按钮样式 */
     :deep(.submit-btn) {
-      width: 180rpx;
-      height: 74rpx;
       font-size: 30rpx;
       border: none;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 20rpx 40rpx;
     }
   }
 
