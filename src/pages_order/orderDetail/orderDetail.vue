@@ -526,6 +526,7 @@
         try {
           await reqDelOrder([orderId.value])
           toast.success('删除成功')
+          uni.redirectTo({ url: '/pages_order/orderList/orderList' })
           return true
         } catch {
           toast.error('删除失败')
