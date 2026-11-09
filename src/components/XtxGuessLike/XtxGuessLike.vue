@@ -37,6 +37,7 @@
       </view>
     </wd-skeleton>
     <view v-show="!isFirstLoading" class="loading-text">
+      <wd-loading color="#666" v-if="!noMoreData"></wd-loading>
       {{ noMoreData ? '-  没有更多商品了  -' : '正在加载...' }}
     </view>
   </view>
@@ -244,6 +245,10 @@
 
     // 加载提示文字
     .loading-text {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20rpx;
       text-align: center;
       font-size: 28rpx;
       color: #666;

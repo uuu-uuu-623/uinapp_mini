@@ -53,7 +53,7 @@ export const useUserStore = defineStore('userStore', () => {
       const { token: T, ...info } = res
       userInfo.value = info as UserInfo
       token.value = T
-    } catch (error) {
+    } catch {
       uni.showToast({ icon: 'error', title: '登陆失败' })
     }
   }
@@ -71,8 +71,7 @@ export const useUserStore = defineStore('userStore', () => {
       const { token: T, ...info } = res
       userInfo.value = info as UserInfo
       token.value = T
-      console.log(res)
-    } catch (error) {
+    } catch {
       uni.showToast({ icon: 'error', title: '登陆失败' })
     }
   }
@@ -97,14 +96,11 @@ export const useUserStore = defineStore('userStore', () => {
     if (userInfo.value) {
       userInfo.value.nickname = res.nickname ?? null
     }
-    console.log(res)
   }
 
   // 请求更新头像  - 黑马接口禁用了 不可上传更改图片
   const UpdateUserAvatar = async (filePath: string) => {
-    console.log(filePath)
     const res = await reqUpdateAvatar(filePath)
-    console.log(res)
     if (userInfo.value) userInfo.value.avatar = res.avatar ?? ''
   }
 

@@ -160,8 +160,16 @@
           "path": "orderWuLiu/orderWuLiu",
           "style": {
             "navigationBarTitleText": "物流信息",
-            "animationType": "slide-in-right",
-            "animationDuration": 300
+            "app-plus": {
+              "animationType": "slide-in-right",
+              "animationDuration": 300
+            }
+          }
+        },
+        {
+          "path": "payment/payment",
+          "style": {
+            "navigationBarTitleText": "支付详情"
           }
         }
       ]

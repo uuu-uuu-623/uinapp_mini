@@ -20,7 +20,7 @@
         <template #input-suffix>
           <view style="display: flex; gap: 10rpx; justify-content: center; align-items: center">
             <wd-icon name="scan" size="25px" color="#666" />
-            <wd-button size="mini" round variant="plain" hairline @click="">搜索</wd-button>
+            <wd-button size="mini" round variant="plain" hairline>搜索</wd-button>
           </view>
         </template>
       </wd-search>
@@ -34,9 +34,6 @@
   const searchVal = ref('')
   const statusBarHeight = ref(20)
 
-  // 数据加载状态
-  // const loading = ref(false)
-
   onMounted(() => {
     try {
       const sysInfo = uni.getSystemInfoSync()
@@ -45,8 +42,6 @@
       console.warn('获取系统信息失败', err)
     }
   })
-
-  // const cancel = () => {}
 </script>
 
 <style lang="scss" scoped>

@@ -5,6 +5,7 @@
     custom-style="min-height: 30vh; max-height: 70vh;"
     closable
     safe-area-inset-bottom
+    lock-scroll
   >
     <!-- 弹窗内部使用 scroll-view 支持长列表滚动 -->
     <scroll-view scroll-y class="popup-scroll-container">
