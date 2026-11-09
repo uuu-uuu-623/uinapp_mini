@@ -3,7 +3,6 @@
     <!-- 导航栏：使用 custom-left 插槽实现动态按钮 -->
     <wd-navbar
       :title="navTitle"
-      left-arrow
       @click-left="handleClickLeft"
       safe-area-inset-top
       fixed
@@ -190,22 +189,35 @@
           round
           type="success"
           v-if="orderDetailInfo?.orderState === orderStateEnum.DaiFaHuo"
+          @click="onMockOutput"
         >
-          模拟商家发货
+          通知商家发货
         </wd-button>
 
         <!-- 再次购买 -->
         <wd-button
           round
+          variant="plain"
           type="success"
           @click="onBuyAggin"
-          v-if="
-            orderDetailInfo?.orderState === orderStateEnum.DaiShouHuo ||
-            orderDetailInfo?.orderState === orderStateEnum.YiQuXiao ||
-            orderDetailInfo?.orderState === orderStateEnum.YiWanCheng
-          "
+          v-if="orderDetailInfo?.orderState !== orderStateEnum.DaiFuKuan"
         >
           再次购买
+        </wd-button>
+
+        <!-- 删除订单 -->
+        <wd-button
+          type="danger"
+          round
+          variant="plain"
+          v-if="
+            orderDetailInfo?.orderState === orderStateEnum.DaiPingJia ||
+            orderDetailInfo?.orderState === orderStateEnum.YiWanCheng ||
+            orderDetailInfo?.orderState === orderStateEnum.YiQuXiao
+          "
+          @click="onDelOrder"
+        >
+          删除订单
         </wd-button>
 
         <!-- 取消订单 -->
@@ -213,10 +225,7 @@
           type="info"
           round
           variant="plain"
-          v-if="
-            orderDetailInfo?.orderState === orderStateEnum.DaiFuKuan ||
-            orderDetailInfo?.orderState === orderStateEnum.DaiShouHuo
-          "
+          v-if="orderDetailInfo?.orderState === orderStateEnum.DaiFuKuan"
           @click="onCancleOrder"
         >
           取消订单
@@ -224,11 +233,27 @@
 
         <!-- 去支付 -->
         <wd-button
+          :loading="payLoading"
           type="primary"
           round
           v-if="orderDetailInfo?.orderState === orderStateEnum.DaiFuKuan"
+          @click="onMockPay"
         >
+          模拟支付
+        </wd-button>
+        <!-- 真实支付 -->
+        <wd-button :loading="payLoading" type="primary" round v-if="false" @click="onPay">
           去支付
+        </wd-button>
+
+        <!-- 确认收货 -->
+        <wd-button
+          type="primary"
+          round
+          v-if="orderDetailInfo?.orderState === orderStateEnum.DaiShouHuo"
+          @click="onReceipt"
+        >
+          确认收货
         </wd-button>
       </view>
     </view>
@@ -295,21 +320,30 @@
   </wd-popup>
 
   <wd-toast cover :z-index="110"></wd-toast>
+  <wd-dialog></wd-dialog>
 </template>
 
 <script lang="ts" setup>
   import { ref, computed } from 'vue'
-  import { onLoad } from '@dcloudio/uni-app'
+  import { onLoad, onUnload } from '@dcloudio/uni-app'
   import { useSafeArea } from '@/composables/useSafeArea'
   import { type orderDetail_skus, type orderDetail, orderStateEnum } from '@/api/order/type'
-  import { reqOrderDetail, reqCancelOrder } from '@/api/order'
-  import { useToast } from '@wot-ui/ui/composables'
+  import {
+    reqOrderDetail,
+    reqCancelOrder,
+    reqMockConsignment,
+    reqReceiptOrder,
+    reqDelOrder,
+  } from '@/api/order'
+  import { reqPay, reqMockPay } from '@/api/pay'
+  import { useToast, useDialog } from '@wot-ui/ui/composables'
   import type { CountDownInstance } from '@wot-ui/ui/components/wd-count-down/types'
 
   // 倒计时的 ref实例
   const countDown = ref<CountDownInstance>()
 
   const toast = useToast()
+  const dialog = useDialog()
 
   // 安全区域
   const safeArea = useSafeArea()
@@ -348,6 +382,8 @@
   const loading = ref(false)
   // 确认取消订单按钮加载状态
   const SureCancelLoading = ref(false)
+  // 支付按钮的加载状态
+  const payLoading = ref(false)
   // 物流信息 组件
   const showWuLiuMap = ref(false)
 
@@ -359,11 +395,15 @@
   // 商品信息
   // const isDiscount = ref(false)
   const goodList = ref<orderDetail_skus[]>([])
+  // 没有skus 的数据
   const orderDetailInfo = ref<orderDetail | null>(null)
 
   // =========== 获取订单详情 ==========
-  const getOrderDetail = async () => {
-    if (loading.value) return
+  // force = true  → 业务强制刷新（支付成功、轮询确认等），绕过锁
+  // force = false → 用户手动触发 / 生命周期触发，正常防抖
+  const getOrderDetail = async (isforce = false) => {
+    // 由于loading锁 会导致支付成功和订单超时轮询确认的请求被拒绝 所以要加上force强制刷新
+    if (loading.value && !isforce) return
     toast.loading({
       position: 'middle',
       msg: '加载中...',
@@ -375,6 +415,8 @@
         return
       }
       const res = await reqOrderDetail(orderId.value)
+      console.log(res)
+      console.log('刷新后 orderState =', res.orderState) // 排查用
 
       // 解构赋值
       const { skus, ...orderData } = res
@@ -382,11 +424,16 @@
       goodList.value = skus
 
       // 当倒计时结束时  (因为倒计时结束 后端返回值 orderState 依旧为1  所以要手动赋值)
-      if (orderDetailInfo.value.countdown === -1) {
+      if (
+        orderDetailInfo.value.countdown === -1 &&
+        orderDetailInfo.value.orderState === orderStateEnum.DaiFuKuan
+      ) {
         orderDetailInfo.value.orderState = orderStateEnum.YiQuXiao
       }
+      return true
     } catch (error) {
       console.warn(error)
+      return false
     } finally {
       loading.value = false
       toast.close()
@@ -407,7 +454,8 @@
 
     // ========== 计算滚动区域高度 ===============
     const sysInfo = uni.getSystemInfoSync()
-    const bottomBarHeight = 70 // 根据你的 bottom-bar 实际高度调整
+    // 精确的底部高度
+    const bottomBarHeight = uni.upx2px(140) // 根据你的 bottom-bar 实际高度调整
     scrollHeight.value = sysInfo.windowHeight - bottomBarHeight
 
     // ========== 获取跳转传递的订单id ===========
@@ -423,19 +471,103 @@
   // 倒计时结束时 回调
   const onFinishConutDown = async () => {
     orderDetailInfo.value!.countdown = -1
-    await getOrderDetail()
+    await getOrderDetail(true)
+    navTitle.value = currentOrderStatus.value.text
   }
 
+  // ============= 底部按钮组的回调函数
   // 点击再次购买按钮回调
   const onBuyAggin = async () => {
-    uni.navigateTo({
+    if (!orderId.value) return
+    uni.redirectTo({
       url: `/pages_order/order/order?orderId=${orderId.value}`,
     })
   }
 
-  // =========== 取消订单 ===========
+  // 模拟发货
+  const isClickOutput = ref(false)
+  const onMockOutput = async () => {
+    if (!orderId.value) return
+    if (isClickOutput.value) return
+    isClickOutput.value = false
+    try {
+      const ok = await reqMockConsignment(orderId.value)
+      if (!ok) {
+        toast.show('商家正在积极备货,请稍等')
+        return
+      }
+
+      // 关键：检查刷新后的状态是否真的变了
+      if (orderDetailInfo.value?.orderState === orderStateEnum.DaiFaHuo) {
+        // 还是待发货 → 后端状态没变（或延迟），提示用户重试
+        toast.show('已通知发货,请耐心等待')
+        return
+      }
+      toast.success('发货成功')
+      await getOrderDetail(true)
+    } catch (error) {
+      toast.error('发货失败')
+      console.warn(error)
+    } finally {
+      isClickOutput.value = true
+    }
+  }
+
+  // 删除订单
+  const onDelOrder = async () => {
+    dialog.confirm({
+      title: '删除订单',
+      msg: '确定删除吗,删除之后将无法恢复',
+      theme: 'text',
+      showClose: true,
+      beforeConfirm: async () => {
+        if (!orderId.value) return false
+        toast.loading('删除中...')
+        try {
+          await reqDelOrder([orderId.value])
+          toast.success('删除成功')
+          return true
+        } catch {
+          toast.error('删除失败')
+          return false
+        }
+      },
+    })
+  }
+
+  // 确认收货
+  const onReceipt = () => {
+    dialog.confirm({
+      title: '确认收货',
+      msg: '为了保障您的权益,请收到货并确认无误之后,再确认收货',
+      theme: 'text',
+      showClose: true,
+      beforeConfirm: async () => {
+        if (!orderId.value) return false
+        toast.loading('确认中...')
+        try {
+          const res = await reqReceiptOrder(orderId.value)
+          if (res.id) {
+            orderDetailInfo.value = res
+            toast.success('确认收货成功')
+            return true
+          } else {
+            toast.error('确认收货失败')
+            return false
+          }
+        } catch (error) {
+          console.warn(error)
+          toast.error('确认收货失败')
+          return false
+        }
+      },
+    })
+  }
+
+  // =========== 取消订单 ============
   // 点击取消订单按钮回调
   const onCancleOrder = () => {
+    selectedReasonId.value = null
     showCancleOrderPopup.value = true
   }
 
@@ -465,9 +597,11 @@
       const reason = cancelReason.find((item) => item.rid === selectedReasonId.value)?.reason
       if (orderId.value && reason) {
         const res = await reqCancelOrder({ orderId: orderId.value, cancelReason: reason })
-        orderDetailInfo.value = res
+        const { skus, ...orderData } = res
+        orderDetailInfo.value = orderData
         // 取消页面的倒计时  在页面中使用v-if 当 orderDetailInfo.value.countdown === -1就渲染别的
         countDown.value?.pause()
+        navTitle.value = currentOrderStatus.value.text
 
         toast.success('已取消订单')
         showCancleOrderPopup.value = false
@@ -480,6 +614,68 @@
     } finally {
       SureCancelLoading.value = false
       toast.close()
+    }
+  }
+
+  // ============ 支付操作 ===============
+  // 定时器id
+  let timer: ReturnType<typeof setTimeout> | null = null
+  const isPay = ref(false)
+  // 开发环境模拟支付
+  const onMockPay = async () => {
+    if (timer !== null) {
+      clearTimeout(timer)
+    }
+    if (!orderId.value) return
+    if (payLoading.value || isPay.value) return
+    payLoading.value = true
+    try {
+      await reqMockPay(orderId.value)
+      isPay.value = true // 表示订单已支付
+      toast.success('支付成功')
+      // 关闭当前页 再跳转
+      timer = setTimeout(async () => {
+        await uni.redirectTo({
+          url: `/pages_order/payment/payment?orderId=${orderId.value}`,
+        })
+        timer = null // ✅ 执行完毕后置空
+      }, 1000)
+    } catch {
+      toast.error('支付失败')
+    } finally {
+      payLoading.value = false
+    }
+  }
+
+  // 重置数据+清空定时器
+  onUnload(() => {
+    if (timer !== null) {
+      clearTimeout(timer)
+      timer = null //  清理后置空
+    }
+    goodList.value = []
+    orderDetailInfo.value = null
+  })
+
+  // 生产环境 真实支付
+  const onPay = async () => {
+    if (!orderId.value) return
+    if (payLoading.value) return
+    payLoading.value = true
+    try {
+      const res = await reqPay(orderId.value)
+      // console.log(res)
+
+      await uni.requestPayment({ ...res, provider: 'wxpay' })
+      toast.success('支付成功')
+      // 关闭当前页 再跳转
+      uni.redirectTo({
+        url: `/pages_order/Payment/Payment?orderId=${orderId.value}`,
+      })
+    } catch {
+      toast.error('支付失败')
+    } finally {
+      payLoading.value = false
     }
   }
 
@@ -509,7 +705,7 @@
     if (canViewWuLiu) {
       // 跳转
       uni.navigateTo({
-        url: `/pages_order/orderWuLiu/orderWuLiu?orderId=${orderId}`,
+        url: `/pages_order/orderWuLiu/orderWuLiu?orderId=${orderId.value}`,
       })
     }
     if (orderDetailInfo.value?.orderState === orderStateEnum.YiQuXiao) {
@@ -544,13 +740,12 @@
   const onRefresh = async () => {
     if (isRefresh.value) return
     isRefresh.value = true
-    try {
-      await getOrderDetail()
-    } catch (error) {
+    const ok = await getOrderDetail(true)
+    if (!ok) {
       uni.showToast({ icon: 'none', title: '刷新失败' })
-    } finally {
-      isRefresh.value = false
+      return
     }
+    isRefresh.value = false
   }
 
   // 动态导航栏
@@ -668,6 +863,7 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
+      position: relative;
 
       .header-bg {
         position: absolute;

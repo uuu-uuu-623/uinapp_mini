@@ -205,3 +205,33 @@ export interface attrList {
   /** 属性值名称，如 黑色*/
   propertyValueName: string
 }
+
+// 物流信息
+/**订单物流 */
+export interface logistics {
+  /**商品图片 */
+  picture: string
+  /**商品件数 */
+  count: number
+  /**快递公司 */
+  company: {
+    /**公司名称 */
+    name: string
+    /**快递编号 */
+    number: string
+    /**联系电话 */
+    tel: string
+  }
+  /**物流日志*/
+  list: logisticsInfo[]
+}
+
+// 物流日志
+export interface logisticsInfo {
+  /**信息ID */
+  id: string
+  /**信息文字 */
+  text: string
+  /**时间 */
+  time: string
+}

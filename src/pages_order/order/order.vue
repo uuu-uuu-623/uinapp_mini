@@ -346,6 +346,10 @@
   }
 
   const submitOrder = async () => {
+    if (goodList.value.length === 0) {
+      toast.error('请选择商品,再结算')
+      return
+    }
     if (submitLoading.value) return
     submitLoading.value = true
     toast.loading({
@@ -370,6 +374,7 @@
         showNotify({ type: 'warning', message: '请选择地址', closable: true, duration: 2000 })
         return
       }
+
       // 发送请求
       const res = await reqsubmitOrder(submitParams.value)
       if (res.id) {
