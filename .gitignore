@@ -28,4 +28,5 @@ unpackage/
 .vscode/
 .idea/
 
-config/env.ts
+
+.workbuddy

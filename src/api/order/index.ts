@@ -1,11 +1,14 @@
 // 该文件用于管理 订单模块的接口api
 import { request } from '@/utils/request'
+import type { SafeAbortSignalType } from '@/utils/abort'
 import type {
   PreOrder_BuyNowParams,
   PreOrderData,
   submitOrder_Params,
   orderDetailData,
   logistics,
+  orderList_Params,
+  orderList_result,
 } from './type'
 
 enum API {
@@ -20,7 +23,7 @@ enum API {
   // 订单管理-取消订单  /member/order/{id}/cancel
   // 订单管理-确认收货 /member/order/{id}/receipt
   // 订单管理-获取订单物流 /member/order/{id}/logistics
-  Order_manager = '/member/order',
+  // （这几个接口与 CRUD_order 同前缀，直接复用，避免重复枚举值）
   // 模拟发货-开发环境 /member/order/consignment/{id}
   Get_MockConsignment = '/member/order/consignment',
 }
@@ -66,7 +69,7 @@ export const reqBuyAgginOrderData = (orderId: string) => {
 // 取消订单
 export const reqCancelOrder = (cancelParams: { orderId: string; cancelReason: string }) => {
   return request<orderDetailData>({
-    url: `${API.Order_manager}/${cancelParams.orderId}/cancel`,
+    url: `${API.CRUD_order}/${cancelParams.orderId}/cancel`,
     method: 'PUT',
     data: { cancelReason: cancelParams.cancelReason },
   })
@@ -91,7 +94,7 @@ export const reqDelOrder = (ids: string[]) => {
 // 确认收货
 export const reqReceiptOrder = (orderId: string) => {
   return request<orderDetailData>({
-    url: `${API.Order_manager}/${orderId}/receipt`,
+    url: `${API.CRUD_order}/${orderId}/receipt`,
     method: 'PUT',
   })
 }
@@ -99,6 +102,18 @@ export const reqReceiptOrder = (orderId: string) => {
 // 获取订单物流
 export const reqLogistics = (orderId: string) => {
   return request<logistics>({
-    url: `${API.Order_manager}/${orderId}/logistics`,
+    url: `${API.CRUD_order}/${orderId}/logistics`,
+  })
+}
+
+// 获取订单列表
+// signal 为可选：下拉刷新时把它透传给 request，abort() 才能真正取消本次网络请求
+export const reqOrderList = (
+  { page, pageSize, orderState }: orderList_Params,
+  signal?: SafeAbortSignalType,
+) => {
+  return request<orderList_result>({
+    url: `${API.CRUD_order}?page=${page}&pageSize=${pageSize}&orderState=${orderState}`,
+    signal,
   })
 }

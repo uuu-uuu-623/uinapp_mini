@@ -110,8 +110,8 @@ export interface orderDetailData extends orderDetail {
   skus: orderDetail_skus[]
 }
 
-// 订单返回值详细数据定义
-export interface orderDetail {
+// 抽出公用数据类型
+export interface sameOrderData {
   /**订单编号 */
   id: string
   /**下单时间 */
@@ -121,19 +121,24 @@ export interface orderDetail {
   /**订单状态 1为待付款、2为待发货、3为待收货、4为待评价、5为已完成、6为已取消*/
   orderState: number
   /**付款截止时间：剩余的秒数，前台转换成分钟：秒数 */
-  payLatestTime: number
+  /**在订单列表中 是确切的时间 是字符串 */
+  payLatestTime: number | string
   /**倒计时--剩余的秒数 -1 表示已经超时，正数表示倒计时未结束 */
   countdown: number
   /**邮费 */
   postFee: string
   /**实付金额 */
   payMoney: string
-  /**支付渠道，1支付宝、2微信 */
-  payChannel: number
   /**金额合计 */
   totalMoney: string
   /**数量合计 */
   totalNum: string
+}
+
+// 订单返回值详细数据定义
+export interface orderDetail extends sameOrderData {
+  /**支付渠道，1支付宝、2微信 */
+  payChannel: number
   /**配送时间类型，1为不限，2为工作日，3为双休或假日 */
   deliveryTimeType: number
   /**收货人 */
@@ -189,7 +194,7 @@ export interface orderDetail_skus {
   /**图片地址 */
   image: string
   /**小计 */
-  totalMoney: number | null
+  totalMoney?: number
   /**实付金额 */
   realPay: number
   /**单价 */
@@ -234,4 +239,48 @@ export interface logisticsInfo {
   text: string
   /**时间 */
   time: string
+}
+
+// 请求获取 订单列表的请求参数
+export interface orderList_Params {
+  /**页码 */
+  page: number
+  /**页容量 */
+  pageSize: number
+  /**订单状态，1为待付款、2为待发货、3为待收货、4为待评价、
+   * 5为已完成、6为已取消，未传该参数或0为全部 */
+  orderState: AllOrderStateType
+}
+
+/**0为全部-前往订单列表 */
+enum orderListState {
+  QuanBu = 0,
+}
+
+/**所有订单类型 */
+type AllOrderStateType = orderStateEnum | orderListState
+
+export const AllOrderState = {
+  orderState: orderStateEnum,
+  listState: orderListState,
+} as const
+
+/**请求获取 订单列表的返回值数据类型定义*/
+export interface orderList_result {
+  /**总记录数 */
+  counts: number
+  /**页尺寸 */
+  pageSize: string
+  /** 总页数 */
+  pages: string
+  /** 当前页码*/
+  page: string
+  /**商品数据集合 */
+  items: orderList_item[]
+}
+
+export interface orderList_item extends sameOrderData {
+  skus: orderDetail_skus[]
+  /**后加 每个订单模拟支付按钮都是独立的 */
+  mockPayLoading?: boolean
 }
