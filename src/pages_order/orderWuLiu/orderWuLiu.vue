@@ -30,7 +30,7 @@
         </view>
         <view class="express-no">
           <text class="no-label">运单号：</text>
-          <text class="no-value">SF1234567890123</text>
+          <text class="no-value">{{ wuliu?.company.number }}</text>
           <wd-button size="mini" plain type="primary" @click="copyExpressNo" round>复制</wd-button>
         </view>
       </view>
@@ -38,19 +38,22 @@
       <!-- 4. 物流轨迹流程图 (使用 wotui wd-steps 竖向步骤条) -->
       <view class="track-card">
         <view class="track-title">物流轨迹</view>
+        <view v-if="logisticsList.length === 0">
+          <wd-empty tip="暂无物流轨迹" />
+        </view>
 
-        <wd-steps direction="vertical" :active="activeStep" vertical dot>
-          <wd-step v-for="(item, index) in logisticsList" :key="index">
+        <wd-steps v-else direction="vertical" :active="activeStep" vertical dot>
+          <wd-step v-for="(item, index) in logisticsList" :key="item.id">
             <!-- 使用 title 插槽自定义标题样式 -->
             <template #title>
               <view class="step-title" :class="{ 'is-active': index === activeStep }">
-                {{ item.title }}
+                {{ item.text }}
               </view>
             </template>
             <!-- 使用 description 插槽自定义描述和时间 -->
             <template #description>
               <view class="step-desc">
-                <text class="desc-text">{{ item.desc }}</text>
+                <text class="desc-text">{{ item.text }}</text>
                 <text class="desc-time">{{ item.time }}</text>
               </view>
             </template>
@@ -65,7 +68,7 @@
   import { ref } from 'vue'
   import { onLoad } from '@dcloudio/uni-app'
   import { reqLogistics } from '@/api/order'
-  import type { logistics } from '@/api/order/type'
+  import type { logistics, logisticsInfo } from '@/api/order/type'
 
   // 页面加载状态
   const loading = ref(false)
@@ -74,6 +77,13 @@
   // 订单的物流信息
   const wuliu = ref<logistics | null>(null)
 
+  // ================= 物流轨迹数据 =================
+  // 步骤条当前激活节点 (0 表示数组第一项，即最新物流状态)
+  const activeStep = ref(0)
+
+  // 模拟真实物流轨迹 (倒序排列，最新状态在最前)
+  const logisticsList = ref<logisticsInfo[]>([])
+
   // 获取订单物流信息
   const getWuLiuInfo = async () => {
     if (!orderId.value || loading.value) return
@@ -81,6 +91,7 @@
     try {
       const res = await reqLogistics(orderId.value)
       wuliu.value = res
+      logisticsList.value = res.list
     } catch {
       uni.showToast({ icon: 'none', title: '正在持续跟踪物流信息...' })
     } finally {
@@ -149,43 +160,11 @@
     { latitude: receiverLat, longitude: receiverLng },
   ])
 
-  // ================= 物流轨迹数据 =================
-  // 步骤条当前激活节点 (0 表示数组第一项，即最新物流状态)
-  const activeStep = ref(0)
-
-  // 模拟真实物流轨迹 (倒序排列，最新状态在最前)
-  const logisticsList = ref([
-    {
-      title: '运输中',
-      desc: '快件已到达【东莞市】转运中心，准备发往【东莞市南城街道】营业部',
-      time: '2026-11-09 14:30:22',
-    },
-    {
-      title: '运输中',
-      desc: '快件已到达【广州市】转运中心',
-      time: '2026-11-09 08:15:10',
-    },
-    {
-      title: '已揽收',
-      desc: '顺丰速运 已揽收，快递员：张三 (13800138000)',
-      time: '2026-11-08 20:05:44',
-    },
-    {
-      title: '已发货',
-      desc: '包裹正在等待快递员揽收',
-      time: '2026-11-08 18:30:00',
-    },
-    {
-      title: '订单已创建',
-      desc: '您在商城的订单已打包完成，通知快递取件',
-      time: '2026-11-08 16:20:15',
-    },
-  ])
-
   // 复制运单号功能
   const copyExpressNo = () => {
+    if (!wuliu.value) return
     uni.setClipboardData({
-      data: 'SF1234567890123',
+      data: wuliu.value.company.number,
       success: () => {
         uni.showToast({
           title: '运单号已复制',
