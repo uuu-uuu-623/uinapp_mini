@@ -143,8 +143,12 @@
                       orderDetailInfo.orderState === orderStateEnum.YiWanCheng
                     "
                   >
-                    <wd-button round variant="plain" size="small" type="info">去评价</wd-button>
-                    <wd-button round variant="plain" size="small">申请售后</wd-button>
+                    <wd-button round variant="plain" size="small" type="info" @click="comment">
+                      去评价
+                    </wd-button>
+                    <wd-button round variant="plain" size="small" @click="saleBack">
+                      申请售后
+                    </wd-button>
                   </view>
                 </view>
               </template>
@@ -318,6 +322,9 @@
     </template>
   </wd-popup>
 
+  <!-- 去评价弹出层 -->
+  <CommentPopup v-model:show-comment-popup="showCommentPopup"></CommentPopup>
+
   <wd-toast cover :z-index="110"></wd-toast>
   <wd-dialog></wd-dialog>
 </template>
@@ -337,6 +344,7 @@
   import { reqPay, reqMockPay } from '@/api/pay'
   import { useToast, useDialog } from '@wot-ui/ui/composables'
   import type { CountDownInstance } from '@wot-ui/ui/components/wd-count-down/types'
+  import CommentPopup from '../components/CommentPopup.vue'
 
   // 倒计时的 ref实例
   const countDown = ref<CountDownInstance>()
@@ -385,6 +393,9 @@
   const payLoading = ref(false)
   // 物流信息 组件
   const showWuLiuMap = ref(false)
+
+  // 控制 去评价弹出层的显示
+  const showCommentPopup = ref(false)
 
   // 展示取消订单弹出层
   const showCancleOrderPopup = ref(false)
@@ -470,6 +481,17 @@
     orderDetailInfo.value!.countdown = -1
     await getOrderDetail(true)
     navTitle.value = currentOrderStatus.value.text
+  }
+
+  // ============ 商品卡片中的按钮组 ====================
+  // 去评价
+  const comment = () => {
+    showCommentPopup.value = true
+  }
+
+  // 申请售后
+  const saleBack = () => {
+    toast.show('功能开发中...')
   }
 
   // ============= 底部按钮组的回调函数 ==================
