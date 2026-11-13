@@ -178,6 +178,11 @@
     overflow: hidden;
     background-color: #fff;
 
+    :deep(.wd-cell__left) {
+      flex: none;
+      width: 200rpx;
+    }
+
     :deep(.price-cell) {
       .wd-cell__value {
         color: #fa4126;

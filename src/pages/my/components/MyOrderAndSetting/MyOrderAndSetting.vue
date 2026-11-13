@@ -3,7 +3,7 @@
     <wd-card title="我的订单" :gutter="0">
       <template #default>
         <wd-grid clickable>
-          <wd-grid-item v-for="item in myOrderList" :key="item.text">
+          <wd-grid-item v-for="item in myOrderList" :key="item.text" :url="item.url">
             <template #icon>
               <wd-icon :name="item.icon" size="50rpx"></wd-icon>
             </template>
@@ -37,8 +37,7 @@
 
 <script lang="ts" setup>
   import { useUserStore } from '@/stores/modules/user'
-
-  // import { ref } from 'vue'
+  import { AllOrderState } from '@/api/order/type'
 
   const userStore = useUserStore()
 
@@ -49,6 +48,8 @@
     },
   })
 
+  const orderListState = AllOrderState
+
   interface setting {
     icon: string
     text: string
@@ -56,11 +57,41 @@
   }
 
   const myOrderList: setting[] = [
-    { icon: 'stamp', text: '待支付', url: userStore.isLogin ? '' : '/pages/login/login' },
-    { icon: 'gift', text: '待发货', url: userStore.isLogin ? '' : '/pages/login/login' },
-    { icon: 'check-circle', text: '待收货', url: userStore.isLogin ? '' : '/pages/login/login' },
-    { icon: 'file', text: '待评价', url: userStore.isLogin ? '' : '/pages/login/login' },
-    { icon: 'menu', text: '全部订单', url: userStore.isLogin ? '' : '/pages/login/login' },
+    {
+      icon: 'menu',
+      text: '全部订单',
+      url: userStore.isLogin
+        ? `/pages_order/orderList/orderList?orderState=${orderListState.listState.QuanBu}`
+        : '/pages/login/login',
+    },
+    {
+      icon: 'stamp',
+      text: '待支付',
+      url: userStore.isLogin
+        ? `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiFuKuan}`
+        : '/pages/login/login',
+    },
+    {
+      icon: 'gift',
+      text: '待发货',
+      url: userStore.isLogin
+        ? `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiFaHuo}`
+        : '/pages/login/login',
+    },
+    {
+      icon: 'check-circle',
+      text: '待收货',
+      url: userStore.isLogin
+        ? `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiShouHuo}`
+        : '/pages/login/login',
+    },
+    {
+      icon: 'file',
+      text: '待评价',
+      url: userStore.isLogin
+        ? `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiPingJia}`
+        : '/pages/login/login',
+    },
   ]
 
   const mySetting: setting[] = [

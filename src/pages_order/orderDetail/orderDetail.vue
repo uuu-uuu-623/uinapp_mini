@@ -302,7 +302,6 @@
           class="popup-footer"
           :style="{
             padding: '20rpx 40rpx',
-            paddingBottom: safeInsets?.bottom ? `${safeInsets.bottom}` : '10' + 'px',
           }"
         >
           <wd-button
@@ -415,8 +414,6 @@
         return
       }
       const res = await reqOrderDetail(orderId.value)
-      console.log(res)
-      console.log('刷新后 orderState =', res.orderState) // 排查用
 
       // 解构赋值
       const { skus, ...orderData } = res
@@ -475,7 +472,7 @@
     navTitle.value = currentOrderStatus.value.text
   }
 
-  // ============= 底部按钮组的回调函数
+  // ============= 底部按钮组的回调函数 ==================
   // 点击再次购买按钮回调
   const onBuyAggin = async () => {
     if (!orderId.value) return

@@ -10,6 +10,7 @@
       enable-back-to-top
       refresher-enabled
       :refresher-triggered="isRefresh"
+      lower-threshold="65"
       @scrolltolower="scrollToLower"
       @refresherrefresh="onRefreshData"
     >

@@ -53,6 +53,7 @@
     </wd-tabs>
   </view>
   <wd-backtop :scroll-top="scrollTop"></wd-backtop>
+  <wd-toast></wd-toast>
 </template>
 
 <script lang="ts" setup>
