@@ -283,4 +283,5 @@ export interface orderList_item extends sameOrderData {
   skus: orderDetail_skus[]
   /**后加 每个订单模拟支付按钮都是独立的 */
   mockPayLoading?: boolean
+  showMorePopover?: boolean
 }

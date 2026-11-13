@@ -148,102 +148,126 @@
                           </view>
 
                           <!-- 按钮组 -->
-                          <template>
-                            <view class="good-btn" @click.stop>
-                              <!-- 删除订单 -->
-                              <view
-                                class="del-icon"
-                                v-if="
-                                  [
-                                    AllOrderState.orderState.DaiPingJia,
-                                    AllOrderState.orderState.YiWanCheng,
-                                    AllOrderState.orderState.YiQuXiao,
-                                  ].includes(item.orderState)
-                                "
-                                @click="onDelOrder(item.id)"
-                              >
+                          <view class="good-btn" @click.stop>
+                            <!-- 删除订单 -->
+                            <view
+                              class="del-order"
+                              v-if="
+                                [
+                                  AllOrderState.orderState.DaiPingJia,
+                                  AllOrderState.orderState.YiWanCheng,
+                                  AllOrderState.orderState.YiQuXiao,
+                                ].includes(item.orderState) ||
+                                (item.orderState === AllOrderState.orderState.DaiFuKuan &&
+                                  item.countdown === -1)
+                              "
+                            >
+                              <view class="del-icon" @click="onDelOrder(item.id)">
                                 <wd-icon name="delete" size="48rpx" color="#e74c3c"></wd-icon>
                               </view>
-
-                              <!-- 再次购买 -->
-                              <wd-button
-                                round
-                                variant="plain"
-                                type="success"
-                                size="small"
-                                @click="onBuyAggin(item.id)"
-                                v-if="item.orderState !== AllOrderState.orderState.DaiFuKuan"
-                              >
-                                再次购买
-                              </wd-button>
-
-                              <!-- 取消订单 -->
-                              <wd-button
-                                type="info"
-                                round
-                                variant="plain"
-                                size="small"
-                                @click="onCancleOrder(item)"
-                                v-if="item.orderState === AllOrderState.orderState.DaiFuKuan"
-                              >
-                                取消订单
-                              </wd-button>
-
-                              <!-- 去支付 -->
-                              <wd-button
-                                :loading="item.mockPayLoading"
-                                type="primary"
-                                size="small"
-                                round
-                                @click="onMockPay(item)"
-                                v-if="item.orderState === AllOrderState.orderState.DaiFuKuan"
-                              >
-                                模拟支付
-                              </wd-button>
-                              <!-- 真实支付 -->
-                              <wd-button
-                                :loading="item.mockPayLoading"
-                                type="primary"
-                                size="small"
-                                round
-                                v-if="false"
-                                @click="onPay(item)"
-                              >
-                                去支付
-                              </wd-button>
-
-                              <!-- 确认收货 -->
-                              <wd-button
-                                size="small"
-                                type="primary"
-                                round
-                                @click="onReceipt(item.id)"
-                                v-if="item.orderState === AllOrderState.orderState.DaiShouHuo"
-                              >
-                                确认收货
-                              </wd-button>
-
-                              <!-- 去评价 -->
-                              <wd-button
-                                round
-                                variant="plain"
-                                size="small"
-                                type="info"
-                                v-if="item.orderState === AllOrderState.orderState.DaiPingJia"
-                              >
-                                去评价
-                              </wd-button>
-                              <!-- 申请售后 -->
-                              <wd-button
-                                round
-                                variant="plain"
-                                size="small"
-                                v-if="item.orderState === AllOrderState.orderState.DaiPingJia"
-                              >
-                                申请售后
-                              </wd-button>
                             </view>
-                          </template>
+
+                            <!-- 更多 包含去评价、申请售后、查看物流 -->
+                            <wd-popover
+                              v-model="item.showMorePopover"
+                              mode="menu"
+                              placement="bottom"
+                              :content="
+                                [
+                                  AllOrderState.orderState.DaiPingJia,
+                                  AllOrderState.orderState.YiWanCheng,
+                                ].includes(item.orderState)
+                                  ? [
+                                      { content: '去评价' },
+                                      { content: '申请售后' },
+                                      { content: '查看物流' },
+                                    ]
+                                  : [{ content: '查看物流' }]
+                              "
+                              @menuclick="(e) => onMenuClick(e, item)"
+                            >
+                              <template #default>
+                                <view
+                                  v-if="
+                                    [
+                                      AllOrderState.orderState.DaiPingJia,
+                                      AllOrderState.orderState.DaiShouHuo,
+                                      AllOrderState.orderState.YiWanCheng,
+                                    ].includes(item.orderState)
+                                  "
+                                >
+                                  <wd-button variant="text" type="info">更多</wd-button>
+                                </view>
+                              </template>
+                            </wd-popover>
+
+                            <!-- 再次购买 -->
+                            <wd-button
+                              round
+                              variant="plain"
+                              type="success"
+                              size="small"
+                              @click="onBuyAggin(item.id)"
+                              v-if="
+                                item.orderState !== AllOrderState.orderState.DaiFuKuan ||
+                                item.countdown === -1
+                              "
+                            >
+                              再次购买
+                            </wd-button>
+
+                            <!-- 取消订单 -->
+                            <wd-button
+                              type="info"
+                              round
+                              variant="plain"
+                              size="small"
+                              @click="onCancleOrder(item)"
+                              v-if="
+                                item.orderState === AllOrderState.orderState.DaiFuKuan &&
+                                item.countdown !== -1
+                              "
+                            >
+                              取消订单
+                            </wd-button>
+
+                            <!-- 去支付 -->
+                            <wd-button
+                              :loading="item.mockPayLoading"
+                              type="primary"
+                              size="small"
+                              round
+                              @click="onMockPay(item)"
+                              v-if="
+                                item.orderState === AllOrderState.orderState.DaiFuKuan &&
+                                item.countdown !== -1
+                              "
+                            >
+                              模拟支付
+                            </wd-button>
+                            <!-- 真实支付 -->
+                            <wd-button
+                              :loading="item.mockPayLoading"
+                              type="primary"
+                              size="small"
+                              round
+                              v-if="false"
+                              @click="onPay(item)"
+                            >
+                              去支付
+                            </wd-button>
+
+                            <!-- 确认收货 -->
+                            <wd-button
+                              size="small"
+                              type="primary"
+                              round
+                              @click="onReceipt(item.id)"
+                              v-if="item.orderState === AllOrderState.orderState.DaiShouHuo"
+                            >
+                              确认收货
+                            </wd-button>
+                          </view>
                         </view>
                       </template>
                     </wd-card>
@@ -325,6 +349,10 @@
       </view>
     </template>
   </wd-popup>
+
+  <!-- 去评价弹出层 -->
+  <CommentPopup v-model:show-comment-popup="showCommentPopup"></CommentPopup>
+
   <wd-toast cover />
   <wd-dialog></wd-dialog>
 </template>
@@ -339,6 +367,8 @@
   import { useSafeArea } from '@/composables/useSafeArea'
   import { reqCancelOrder, reqReceiptOrder, reqDelOrder } from '@/api/order'
   import { reqPay, reqMockPay } from '@/api/pay'
+  import type { PopoverMenuItem } from '@wot-ui/ui/composables/usePopover'
+  import CommentPopup from '../components/CommentPopup.vue'
 
   // ==================== 基础工具 ====================
   const toast = useToast()
@@ -347,6 +377,8 @@
   const safeBottom = ref<number>(0)
   const bottomSafe = computed(() => `${safeBottom.value || 15}px`)
   const pageLoading = ref(true)
+  // 评价弹出层
+  const showCommentPopup = ref(false)
 
   /**
    * 小程序原生 scroll-view 必须拿到「明确的 px 高度」。
@@ -501,6 +533,9 @@
       s.page = page + 1
       s.hasMore = newList.length > 0 && s.page <= Number(res.pages)
       s.loaded = true
+
+      // 增加 有更多按钮的订单的气泡框 展示
+      s.list.forEach((order) => (order.showMorePopover = false)) // 主动初始化，确保响应式追踪
     } catch (error) {
       // ✅ 只有"自己仍是最新请求"且"未被 abort"时才提示
       //    被 abort 的请求不进这里（abort 会 reject，但 reqId 已变）
@@ -609,6 +644,18 @@
     })
   }
 
+  // ================ 按钮组中气泡框的内容 =========
+  const onMenuClick = ({ item }: { item: PopoverMenuItem }, orderItem: orderList_item) => {
+    if (item.content === '去评价') {
+      showCommentPopup.value = true
+    } else if (item.content === '申请售后') {
+      toast.show('等待开发')
+    } else if (item.content === '查看物流') {
+      uni.navigateTo({ url: `/pages_order/orderWuLiu/orderWuLiu?orderId=${orderItem.id}` })
+    }
+    orderItem.showMorePopover = false // 关闭当前气泡
+  }
+
   // ================ 按钮组事件 ===========
   // 确认收货
   const onReceipt = (orderId: string) => {
@@ -642,8 +689,6 @@
   // 模拟支付
   // 定时器id
   let timer: ReturnType<typeof setTimeout> | null = null
-  // 订单是否已支付
-  // const isPay = ref(false)
   // 开发环境模拟支付
   const onMockPay = async (item: orderList_item) => {
     if (timer !== null) {
@@ -870,6 +915,10 @@
           min-height: 100%;
           padding: 20rpx 0; /* 原 tab-content 的 padding 移到这里 */
 
+          :deep(.wd-card) {
+            overflow: visible;
+          }
+
           :deep(.wd-card__title) {
             padding-bottom: 0;
           }
@@ -1011,8 +1060,15 @@
         padding-top: 20rpx;
         border-top: 1rpx solid #f5f5f5;
 
-        .del-icon {
+        .del-order {
           flex: 1;
+          display: flex;
+          justify-content: start;
+          align-items: center;
+
+          .del-icon {
+            width: 100rpx;
+          }
         }
 
         :deep(.wd-button) {
