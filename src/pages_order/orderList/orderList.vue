@@ -85,8 +85,7 @@
                               justify-content: center;
                             "
                             v-if="
-                              item.countdown !== -1 &&
-                              item.orderState === AllOrderState.orderState.DaiFuKuan
+                              getEffectiveOrderState(item) === AllOrderState.orderState.DaiFuKuan
                             "
                           >
                             <wd-count-down
@@ -101,25 +100,10 @@
                             <text>{{ item.createTime }}</text>
                           </view>
 
-                          <view class="state">
-                            <text
-                              v-if="
-                                (item.countdown === -1 &&
-                                  item.orderState === AllOrderState.orderState.DaiFuKuan) ||
-                                item.orderState === AllOrderState.orderState.YiQuXiao
-                              "
-                            >
-                              已取消
-                            </text>
-                            <text v-else-if="tab.key === item.orderState">
-                              {{ tab.title }}
-                            </text>
-                            <text v-else>
-                              {{
-                                orderTabs[item.orderState]?.title ||
-                                otherState[item.orderState]?.title
-                              }}
-                            </text>
+                          <!-- 状态文案统一由 getOrderStateText 计算：
+                               全部订单里也能正确显示「已完成 / 已取消」 -->
+                          <view class="state" :class="{ 'state--pending': isPendingState(item) }">
+                            <text>{{ getOrderStateText(item) }}</text>
                           </view>
                         </view>
                       </template>
@@ -159,9 +143,7 @@
                                   AllOrderState.orderState.DaiPingJia,
                                   AllOrderState.orderState.YiWanCheng,
                                   AllOrderState.orderState.YiQuXiao,
-                                ].includes(item.orderState) ||
-                                (item.orderState === AllOrderState.orderState.DaiFuKuan &&
-                                  item.countdown === -1)
+                                ].includes(getEffectiveOrderState(item))
                               "
                             >
                               <view class="del-icon" @click="onDelOrder(item.id)">
@@ -178,7 +160,7 @@
                                   AllOrderState.orderState.DaiPingJia,
                                   AllOrderState.orderState.DaiShouHuo,
                                   AllOrderState.orderState.YiWanCheng,
-                                ].includes(item.orderState)
+                                ].includes(getEffectiveOrderState(item))
                               "
                               v-model="item.showMorePopover"
                               mode="menu"
@@ -187,7 +169,7 @@
                                 [
                                   AllOrderState.orderState.DaiPingJia,
                                   AllOrderState.orderState.YiWanCheng,
-                                ].includes(item.orderState)
+                                ].includes(getEffectiveOrderState(item))
                                   ? [
                                       { content: '去评价' },
                                       { content: '申请售后' },
@@ -202,6 +184,8 @@
                               </template>
                             </wd-popover>
 
+                            <!-- 以下按钮统一使用 getEffectiveOrderState(item)，
+                                 与顶部状态文案保持同一套判定逻辑 -->
                             <!-- 再次购买 -->
                             <wd-button
                               round
@@ -210,8 +194,7 @@
                               size="small"
                               @click="onBuyAggin(item.id)"
                               v-if="
-                                item.orderState !== AllOrderState.orderState.DaiFuKuan ||
-                                item.countdown === -1
+                                getEffectiveOrderState(item) !== AllOrderState.orderState.DaiFuKuan
                               "
                             >
                               再次购买
@@ -225,8 +208,7 @@
                               size="small"
                               @click="onCancleOrder(item)"
                               v-if="
-                                item.orderState === AllOrderState.orderState.DaiFuKuan &&
-                                item.countdown !== -1
+                                getEffectiveOrderState(item) === AllOrderState.orderState.DaiFuKuan
                               "
                             >
                               取消订单
@@ -240,8 +222,7 @@
                               round
                               @click="onMockPay(item)"
                               v-if="
-                                item.orderState === AllOrderState.orderState.DaiFuKuan &&
-                                item.countdown !== -1
+                                getEffectiveOrderState(item) === AllOrderState.orderState.DaiFuKuan
                               "
                             >
                               模拟支付
@@ -264,7 +245,9 @@
                               type="primary"
                               round
                               @click="onReceipt(item.id)"
-                              v-if="item.orderState === AllOrderState.orderState.DaiShouHuo"
+                              v-if="
+                                getEffectiveOrderState(item) === AllOrderState.orderState.DaiShouHuo
+                              "
                             >
                               确认收货
                             </wd-button>
@@ -366,7 +349,12 @@
   import { onLoad, onUnload } from '@dcloudio/uni-app'
   import { useToast, useDialog } from '@wot-ui/ui/composables'
   import { reqOrderList } from '@/api/order'
-  import { AllOrderState, type orderList_item, type orderList_Params } from '@/api/order/type'
+  import {
+    AllOrderState,
+    orderStateEnum,
+    type orderList_item,
+    type orderList_Params,
+  } from '@/api/order/type'
   import { SafeAbortController, type SafeAbortControllerType } from '@/utils/abort'
   import { useSafeArea } from '@/composables/useSafeArea'
   import { reqCancelOrder, reqReceiptOrder, reqDelOrder } from '@/api/order'
@@ -429,11 +417,44 @@
     { key: AllOrderState.orderState.DaiPingJia, title: '待评价' },
   ] as const
 
-  // 其他的 状态
-  const otherState = [
-    { key: AllOrderState.orderState.YiQuXiao, title: '已取消' },
-    { key: AllOrderState.orderState.YiWanCheng, title: '已完成' },
-  ] as const
+  /**
+   * 订单状态 → 展示文案
+   * ⚠️ 必须用「枚举值」做 key 的映射表，不能用数组下标去取：
+   *    状态是 1~6，而数组下标是从 0 开始的，orderTabs[5] / [6] 永远是 undefined。
+   */
+  const orderStateText: Record<orderStateEnum, string> = {
+    [orderStateEnum.DaiFuKuan]: '待付款',
+    [orderStateEnum.DaiFaHuo]: '待发货',
+    [orderStateEnum.DaiShouHuo]: '待收货',
+    [orderStateEnum.DaiPingJia]: '待评价',
+    [orderStateEnum.YiWanCheng]: '已完成',
+    [orderStateEnum.YiQuXiao]: '已取消',
+  }
+
+  /**
+   * 计算订单「对用户可见的真实状态」。
+   *
+   * 后端在待付款订单超时后，orderState 可能仍是 1（DaiFuKuan），只是 countdown = -1；
+   * 业务上它已经是「已取消」。所有状态相关的展示与按钮判断都走这一个入口，
+   * 避免出现「状态显示已取消，按钮却还是取消订单 / 模拟支付」的不一致。
+   */
+  const getEffectiveOrderState = (item: orderList_item): orderStateEnum => {
+    if (item.orderState === AllOrderState.orderState.DaiFuKuan && item.countdown === -1) {
+      return AllOrderState.orderState.YiQuXiao
+    }
+    return item.orderState as orderStateEnum
+  }
+
+  /** 状态文案：只由订单数据决定，与当前所在 Tab 无关 */
+  const getOrderStateText = (item: orderList_item): string =>
+    orderStateText[getEffectiveOrderState(item)] ?? '未知状态'
+
+  /** 待办类状态用主题色强调（可按需调整） */
+  const isPendingState = (item: orderList_item): boolean => {
+    return [orderStateEnum.DaiFuKuan, orderStateEnum.DaiPingJia].includes(
+      getEffectiveOrderState(item),
+    )
+  }
 
   type TabKey = (typeof orderTabs)[number]['key']
 
@@ -528,7 +549,7 @@
     const list = tabStateMap[tabKey]?.list ?? []
     if (tabKey === AllOrderState.orderState.DaiFuKuan) {
       return list.filter(
-        (item) => item.countdown !== -1 && item.orderState === AllOrderState.orderState.DaiFuKuan,
+        (item) => getEffectiveOrderState(item) === AllOrderState.orderState.DaiFuKuan,
       )
     }
     return list
@@ -878,8 +899,8 @@
   const handleConfirmCancel = async () => {
     const item = cancelingOrder.value
     if (!item) return
-    // 状态前置校验
-    if (item.orderState !== AllOrderState.orderState.DaiFuKuan) {
+    // 状态前置校验（倒计时已结束的待付款订单同样不允许再取消）
+    if (getEffectiveOrderState(item) !== AllOrderState.orderState.DaiFuKuan) {
       toast.warning('订单状态已变更,请刷新后重试')
       showCancleOrderPopup.value = false
       return
@@ -1032,6 +1053,12 @@
 
       .state {
         color: #444;
+
+        /* 待付款 / 待评价 等待办状态用主题色强调 */
+        &.state--pending {
+          color: #e74c3c;
+          font-weight: 500;
+        }
       }
     }
 
