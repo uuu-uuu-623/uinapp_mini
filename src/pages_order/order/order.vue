@@ -393,7 +393,7 @@
 
   onUnload(() => {
     // 清除数据
-    // addressStore.resetData()
+    addressStore.resetData()
     // 重置请求参数
     Object.assign(buyNowParams.value, {
       skuId: '',
