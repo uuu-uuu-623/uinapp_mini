@@ -51,7 +51,7 @@
                 <!-- 左侧：勾选框 + 商品图片 -->
                 <view class="goods-left">
                   <!-- 给单选框套一个盒子 繁殖事件冒泡 -->
-                  <view @click.stop>
+                  <view @click.stop style="display: flex">
                     <wd-checkbox
                       :disabled="isLoading(item.skuId)"
                       v-model="item.checked"
@@ -516,7 +516,7 @@
 
     .goods-left {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: 20rpx;
       flex-shrink: 0;
 
