@@ -507,7 +507,10 @@
   const isClickOutput = ref(false)
   const onMockOutput = async () => {
     if (!orderId.value) return
-    if (isClickOutput.value) return
+    if (isClickOutput.value) {
+      toast.show('商家正在积极备货中...')
+      return
+    }
     isClickOutput.value = false
     try {
       const ok = await reqMockConsignment(orderId.value)
