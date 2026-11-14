@@ -20,7 +20,7 @@ import { BASE_URL } from '@/config/env'
 import { type SafeAbortSignalType, createAbortError } from './abort'
 // 引入用户仓库 得到token
 import { useUserStore } from '@/stores/modules/user'
-import { storage } from './storage'
+// import { storage } from './storage'
 
 // 发送请求的配置项类型定义
 interface ReqOption {
@@ -76,7 +76,7 @@ export const request = <T = any>(options: ReqOption): Promise<T> => {
         // 替换成token
         Authorization: userstore.token,
       },
-      timeout: 15000,
+      timeout: 150000,
 
       // 响应成功
       success: (res) => {
@@ -97,9 +97,8 @@ export const request = <T = any>(options: ReqOption): Promise<T> => {
           resolve(result)
         } else if (code === 401 || code === '401') {
           uni.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
-          // uni.removeStorageSync('token') // 根据你实际的存储 key 调整
-          // 清除所有用户信息
-          storage.clear()
+          //  退出登录
+          userstore.logout()
           setTimeout(() => {
             uni.reLaunch({ url: '/pages/login/login' })
           }, 1500)

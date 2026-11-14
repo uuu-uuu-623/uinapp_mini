@@ -3,7 +3,7 @@
     <wd-card title="我的订单" :gutter="0">
       <template #default>
         <wd-grid clickable>
-          <wd-grid-item v-for="item in myOrderList" :key="item.text" :url="item.url">
+          <wd-grid-item v-for="item in myOrderList" :key="item.text" @click="toUrl(item.url)">
             <template #icon>
               <wd-icon :name="item.icon" size="50rpx"></wd-icon>
             </template>
@@ -20,8 +20,7 @@
     <wd-card>
       <template #default>
         <wd-grid clickable>
-          <!-- v-if比v-for等级高 -->
-          <wd-grid-item v-for="item in mySetting" :key="item.text" :url="item.url">
+          <wd-grid-item v-for="item in mySetting" :key="item.text" @click="toUrl(item.url)">
             <template #icon>
               <wd-icon :name="item.icon" size="50rpx"></wd-icon>
             </template>
@@ -56,41 +55,41 @@
     url: string
   }
 
+  const toUrl = (path: string) => {
+    if (!userStore.isLogin) {
+      uni.navigateTo({ url: '/pages/login/login' })
+    } else if (path === '') {
+      uni.showToast({ title: '功能开发中...' })
+    } else {
+      uni.navigateTo({ url: path })
+    }
+  }
+
   const myOrderList: setting[] = [
     {
       icon: 'menu',
       text: '全部订单',
-      url: userStore.isLogin
-        ? `/pages_order/orderList/orderList?orderState=${orderListState.listState.QuanBu}`
-        : '/pages/login/login',
+      url: `/pages_order/orderList/orderList?orderState=${orderListState.listState.QuanBu}`,
     },
     {
       icon: 'stamp',
       text: '待支付',
-      url: userStore.isLogin
-        ? `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiFuKuan}`
-        : '/pages/login/login',
+      url: `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiFuKuan}`,
     },
     {
       icon: 'gift',
       text: '待发货',
-      url: userStore.isLogin
-        ? `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiFaHuo}`
-        : '/pages/login/login',
+      url: `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiFaHuo}`,
     },
     {
       icon: 'check-circle',
       text: '待收货',
-      url: userStore.isLogin
-        ? `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiShouHuo}`
-        : '/pages/login/login',
+      url: `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiShouHuo}`,
     },
     {
       icon: 'file',
       text: '待评价',
-      url: userStore.isLogin
-        ? `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiPingJia}`
-        : '/pages/login/login',
+      url: `/pages_order/orderList/orderList?orderState=${orderListState.orderState.DaiPingJia}`,
     },
   ]
 
@@ -99,10 +98,10 @@
     {
       icon: 'location',
       text: '收货地址',
-      url: userStore.isLogin ? '/pages_member/address/address' : '/pages/login/login',
+      url: '/pages_member/address/address',
     },
-    { icon: 'common', text: '我的收藏', url: userStore.isLogin ? '' : '/pages/login/login' },
-    { icon: 'mic', text: '客服', url: userStore.isLogin ? '' : '/pages/login/login' },
+    { icon: 'common', text: '我的收藏', url: '' },
+    { icon: 'mic', text: '客服', url: '' },
   ]
 </script>
 

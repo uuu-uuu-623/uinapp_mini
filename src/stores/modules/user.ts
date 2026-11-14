@@ -71,8 +71,10 @@ export const useUserStore = defineStore('userStore', () => {
       const { token: T, ...info } = res
       userInfo.value = info as UserInfo
       token.value = T
-    } catch {
+    } catch (error) {
       uni.showToast({ icon: 'error', title: '登陆失败' })
+      // 没有抛出错误  就会导致在登录页永远登陆成功
+      throw error
     }
   }
 

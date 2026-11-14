@@ -107,6 +107,7 @@
 
   // 登陆成功后 的处理函数
   const successLogin = () => {
+    if (!userStore.isLogin) return
     if (timer !== null) {
       clearTimeout(timer)
     }
