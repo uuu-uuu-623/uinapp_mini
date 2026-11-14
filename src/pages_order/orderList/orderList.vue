@@ -40,6 +40,7 @@
             <!-- 订单列表 -->
             <scroll-view
               v-else
+              :id="`scroll-area-${tab.key}`"
               class="scroll-area"
               :style="{ height: scrollHeight + 'px' }"
               scroll-y
@@ -103,8 +104,9 @@
                           <view class="state">
                             <text
                               v-if="
-                                item.countdown === -1 &&
-                                item.orderState === AllOrderState.orderState.DaiFuKuan
+                                (item.countdown === -1 &&
+                                  item.orderState === AllOrderState.orderState.DaiFuKuan) ||
+                                item.orderState === AllOrderState.orderState.YiQuXiao
                               "
                             >
                               已取消
@@ -168,10 +170,19 @@
                             </view>
 
                             <!-- 更多 包含去评价、申请售后、查看物流 -->
+                            <!-- 给气泡加 v-if，把状态判断提到组件上 -->
                             <wd-popover
+                              v-if="
+                                activeTab === tab.key &&
+                                [
+                                  AllOrderState.orderState.DaiPingJia,
+                                  AllOrderState.orderState.DaiShouHuo,
+                                  AllOrderState.orderState.YiWanCheng,
+                                ].includes(item.orderState)
+                              "
                               v-model="item.showMorePopover"
                               mode="menu"
-                              placement="bottom"
+                              :placement="popoverPlacement"
                               :content="
                                 [
                                   AllOrderState.orderState.DaiPingJia,
@@ -187,17 +198,7 @@
                               @menuclick="(e) => onMenuClick(e, item)"
                             >
                               <template #default>
-                                <view
-                                  v-if="
-                                    [
-                                      AllOrderState.orderState.DaiPingJia,
-                                      AllOrderState.orderState.DaiShouHuo,
-                                      AllOrderState.orderState.YiWanCheng,
-                                    ].includes(item.orderState)
-                                  "
-                                >
-                                  <wd-button variant="text" type="info">更多</wd-button>
-                                </view>
+                                <wd-button variant="text" type="info">更多</wd-button>
                               </template>
                             </wd-popover>
 
@@ -351,7 +352,10 @@
   </wd-popup>
 
   <!-- 去评价弹出层 -->
-  <CommentPopup v-model:show-comment-popup="showCommentPopup"></CommentPopup>
+  <CommentPopup
+    v-model:show-comment-popup="showCommentPopup"
+    @is-yi-wan-cheng="orderStateToYiWanCheng"
+  ></CommentPopup>
 
   <wd-toast cover />
   <wd-dialog></wd-dialog>
@@ -379,6 +383,9 @@
   const pageLoading = ref(true)
   // 评价弹出层
   const showCommentPopup = ref(false)
+
+  // 定时器id
+  let timer: ReturnType<typeof setTimeout> | null = null
 
   /**
    * 小程序原生 scroll-view 必须拿到「明确的 px 高度」。
@@ -430,7 +437,7 @@
 
   type TabKey = (typeof orderTabs)[number]['key']
 
-  const activeTab = ref<TabKey>(AllOrderState.orderState.DaiFuKuan)
+  const activeTab = ref<TabKey>(AllOrderState.listState.QuanBu)
 
   const PAGE_SIZE = 8
 
@@ -467,6 +474,50 @@
   // 在 setup 层就把所有 Tab 的状态建好：模板不必靠可选链兜底，
   // 切 Tab 时也不会出现状态对象临时缺失的一帧
   orderTabs.forEach((t) => getState(t.key))
+
+  // ==================== 气泡定位修复 ====================
+  /**
+   * wd-popover 只在 onMounted 里量一次 #target 的宽高，之后永久缓存（usePopover.ts:76）。
+   * 首屏那一帧 wd-tabs 内部 activeIndex 还是 0（wd-tabs.vue:164），当前 tab 的
+   * .wd-tab__body 带 display:none / height:0，于是量到 0 → left:0px; top:14px。
+   * 这就是「首屏待评价错、切到全部再切回来就好」的原因：后者销毁重建 = 重新测量。
+   *
+   * 组件源码 102-107 行 watch(placement) → popover.init() 是它自带的重新测量入口。
+   * 所以让气泡先以 'bottom' 挂载，等渲染层确认布局已落地后切成 'top'：
+   *   1. 触发一次 init() 重新测量，覆盖首屏的错误缓存；
+   *   2. 顺带改成向上弹，避开 scroll-view 底边对向下气泡的裁剪。
+   * 不销毁实例、不改组件库、不靠 nextTick 猜帧数。
+   */
+  const popoverPlacement = ref<'bottom' | 'top'>('bottom')
+
+  const MAX_MEASURE_RETRY = 10
+
+  const refreshPopoverMeasure = (retry = 0) => {
+    if (timer !== null) {
+      clearTimeout(timer)
+    }
+    const query = uni.createSelectorQuery()
+    query
+      .select(`#scroll-area-${activeTab.value}`)
+      .boundingClientRect((rect) => {
+        const node = Array.isArray(rect) ? rect[0] : rect
+        // 必须查「当前激活 tab」的容器，不能查任意一个可见容器：
+        // 首屏那一帧 wd-tabs 内部激活的是第 0 个 tab，查全部会误判成已就绪。
+        // display:none（activeIndex 未修正）或 height:0（scrollHeight 未注入）都会量到 0。
+        if (Number(node?.height ?? 0) <= 0) {
+          if (retry < MAX_MEASURE_RETRY) {
+            timer = setTimeout(() => {
+              refreshPopoverMeasure(retry + 1)
+              timer = null
+            }, 50)
+            return
+          }
+          // 兜底：不再等，仍切一次 top 触发重测（至少修掉向下弹出被裁剪）
+        }
+        popoverPlacement.value = 'top'
+      })
+      .exec()
+  }
 
   /**
    * 按 tabKey 取有效列表
@@ -573,6 +624,8 @@
     pageLoading.value = false
     // 列表容器渲染出来后再量高度并注入 scroll-view
     await updateScrollHeight()
+    // 布局落地后让 wd-popover 重新测量触发器尺寸，覆盖首屏隐藏态下的错误缓存
+    refreshPopoverMeasure()
   })
 
   onUnload(() => {
@@ -626,8 +679,10 @@
   const onChangeTab = async ({ name }: { index: number; name: number }) => {
     const key = name as TabKey
 
-    // 切回来时按该 Tab 保留的滚动位置恢复回顶按钮状态
-    // currentScrollTop = scrollPosMap[key] ?? 0
+    // 气泡因 v-if 销毁重建，重建后内部 showPopover 为 false，需同步复位外部状态
+    Object.values(tabStateMap).forEach((s) => {
+      s.list.forEach((order) => (order.showMorePopover = false))
+    })
 
     // 切 Tab 不 abort 其他 Tab 的请求：让请求跑完，切回来命中缓存
     const s = getState(key)
@@ -645,15 +700,30 @@
   }
 
   // ================ 按钮组中气泡框的内容 =========
+  // 去评价的是什么订单id
+  const comment_orderId = ref('')
   const onMenuClick = ({ item }: { item: PopoverMenuItem }, orderItem: orderList_item) => {
     if (item.content === '去评价') {
       showCommentPopup.value = true
+      comment_orderId.value = orderItem.id
     } else if (item.content === '申请售后') {
       toast.show('等待开发')
     } else if (item.content === '查看物流') {
       uni.navigateTo({ url: `/pages_order/orderWuLiu/orderWuLiu?orderId=${orderItem.id}` })
     }
-    orderItem.showMorePopover = false // 关闭当前气泡
+    orderItem.showMorePopover = false // 关闭当前气泡弹出框
+  }
+
+  // 点击去评价 评价完成后修改订单状态为已完成
+  const orderStateToYiWanCheng = async (orderState: number) => {
+    const target = tabStateMap[activeTab.value]?.list.find((o) => o.id === comment_orderId.value)
+    if (!target) {
+      toast.error('评价失败,请确认订单有效')
+      return
+    }
+    target.orderState = orderState
+
+    // await fetchOrders(activeTab.value, true)
   }
 
   // ================ 按钮组事件 ===========
@@ -687,8 +757,6 @@
   }
 
   // 模拟支付
-  // 定时器id
-  let timer: ReturnType<typeof setTimeout> | null = null
   // 开发环境模拟支付
   const onMockPay = async (item: orderList_item) => {
     if (timer !== null) {
@@ -708,7 +776,7 @@
           url: `/pages_order/payment/payment?orderId=${item.id}`,
         })
         timer = null // ✅ 执行完毕后置空
-      }, 1000)
+      }, 800)
     } catch {
       toast.error('支付失败')
     } finally {
@@ -828,15 +896,28 @@
 
     try {
       const reason = cancelReason.find((item) => item.rid === selectedReasonId.value)?.reason
-      if (item.id && reason) {
-        await reqCancelOrder({ orderId: item.id, cancelReason: reason })
-
-        toast.success('已取消订单')
-        await fetchOrders(activeTab.value, true) // 刷新，让它从待付款消失
-        showCancleOrderPopup.value = false
-      } else {
+      if (!item.id || !reason) {
+        toast.close()
         toast.error('取消原因获取异常')
+        return
       }
+
+      await reqCancelOrder({ orderId: item.id, cancelReason: reason })
+      // 暂停倒计时
+      item.countdown = -1
+      // 修改订单状态
+      item.orderState = AllOrderState.orderState.YiQuXiao
+      // 取消已经成功：先把 UI 收掉，再刷新列表
+      toast.success('已取消订单')
+
+      // 关闭弹出层
+      showCancleOrderPopup.value = false
+      // 重置数据
+      cancelingOrder.value = null
+      selectedReasonId.value = null
+
+      // 刷新失败不影响"取消成功"这个结论，只当加载失败处理
+      fetchOrders(activeTab.value, true).catch(() => {})
     } catch {
       toast.close()
       // 失败不关弹窗，保留 selectedReasonId 供用户重试
