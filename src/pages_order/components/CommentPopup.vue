@@ -23,23 +23,13 @@
         <wd-form ref="formRef" :model="commentForm" :schema="formSchema">
           <!-- 评分区 -->
           <view class="section rate-section">
-            <wd-form-item v-for="rate in visibleRates" :key="rate.key" :prop="rate.key">
+            <wd-form-item v-for="rate in rateList" :key="rate.key" :prop="rate.key">
               <view class="rate-item">
                 <text class="rate-label">{{ rate.label }}</text>
                 <wd-rate v-model="commentForm[rate.key]" :num="5" />
                 <text class="rate-desc">{{ RATE_TEXT[commentForm[rate.key] - 1] }}</text>
               </view>
             </wd-form-item>
-
-            <!-- 超过一项才显示展开/收起 -->
-            <view
-              class="rate-toggle"
-              v-if="rateList.length > 1"
-              @click="showAllRates = !showAllRates"
-            >
-              <text>{{ showAllRates ? '收起' : '展开更多评分' }}</text>
-              <wd-icon :name="showAllRates ? 'arrow-up' : 'arrow-down'" size="24rpx" color="#999" />
-            </view>
           </view>
 
           <!-- 评价内容 -->
@@ -83,12 +73,14 @@
   import { useToast } from '@wot-ui/ui/composables'
   import type { FormSchema } from '@wot-ui/ui'
   import type { FormInstance } from '@wot-ui/ui/components/wd-form/types'
+  import { AllOrderState } from '@/api/order/type'
 
   const toast = useToast()
 
   const props = defineProps<{ showCommentPopup: boolean }>()
   const emit = defineEmits<{
     (e: 'update:showCommentPopup', value: boolean): void
+    (e: 'isYiWanCheng', value: number): void
   }>()
 
   const visible = computed({
@@ -135,11 +127,6 @@
     content: '',
     isAnonymous: true,
   })
-
-  // ============ 展开状态 ============
-  const showAllRates = ref(false)
-
-  const visibleRates = computed(() => (showAllRates.value ? rateList : rateList.slice(0, 1)))
 
   // ============ 校验 Schema ============
   const formSchema: FormSchema = {
@@ -190,6 +177,7 @@
       //   content: commentForm.content.trim(),
       //   anonymous: commentForm.isAnonymous,
       // })
+      emit('isYiWanCheng', AllOrderState.orderState.YiWanCheng)
       toast.success('评价提交成功')
       visible.value = false
       resetForm()
@@ -207,7 +195,6 @@
     commentForm.logistics = 0
     commentForm.content = ''
     commentForm.isAnonymous = true
-    showAllRates.value = false
     // 清除行内错误提示
     formRef.value?.reset()
   }
@@ -215,6 +202,7 @@
 
 <style scoped lang="scss">
   /* 评价弹出层相关样式 */
+
   /* 评价弹出层 */
   .comment-popup {
     display: flex;
