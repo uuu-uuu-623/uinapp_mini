@@ -6,7 +6,18 @@
 
   <view class="orderList" v-else>
     <wd-tabs v-model="activeTab" @change="onChangeTab" custom-style="background-color: #fff;">
-      <wd-tab v-for="tab in orderTabs" :key="tab.key" :title="tab.title" :name="tab.key" lazy>
+      <wd-tab
+        v-for="tab in orderTabs"
+        :key="tab.key"
+        :title="tab.title"
+        :name="tab.key"
+        lazy
+        :badge-props="{
+          value: tabStateMap[tab.key]?.counts,
+          max: 99,
+          hidden: tabStateMap[tab.key]?.counts === 0 || getEffectiveList(tab.key).length === 0,
+        }"
+      >
         <template #default>
           <view
             class="tab-content"
@@ -466,6 +477,7 @@
   interface TabState {
     list: orderList_item[] // 已加载的订单
     page: number // 下一页请求页码
+    counts: number // 总记录数
     hasMore: boolean // 是否还有更多
     loading: boolean // 是否正在请求
     loaded: boolean // 是否至少成功加载过一次
@@ -481,6 +493,7 @@
       tabStateMap[key] = {
         list: [],
         page: 1,
+        counts: 0,
         hasMore: true,
         loading: false,
         loaded: false,
@@ -602,6 +615,7 @@
 
       const newList = res.items ?? []
       s.list = isRefresh ? newList : [...s.list, ...newList]
+      s.counts = res.counts
       s.page = page + 1
       s.hasMore = newList.length > 0 && s.page <= Number(res.pages)
       s.loaded = true
